@@ -87,8 +87,9 @@ extract_recovery_framework <- function(verbose=T){
 #' Extract join framework to put into gcode
 #'
 #' Join data to improve modelling capacity for similar axes
-#' @param alpha Joining the alpha parameters. A vector of integers, where identical integers indicate same the data axis to be joined. Axes that should not be shared are given NA.
-#' @param beta Joining the beta parameters. A vector of integers, where identical integers indicate same the data axis to be joined. Axes that should not be shared are given NA.
+#' @param alpha Joining the alpha parameters. A vector of integers, where identical integers indicate same the data axis to be joined.
+#' @param beta Joining the beta parameters. A vector of integers, where identical integers indicate same the data axis to be joined.
+#' @param code Joining the code parameters. A vector of integers, where identical integers indicate same the data axis to be joined.
 #' @export
 extract_join_framework <- function(verbose=T){
   join <- list(alpha=NULL,

@@ -13,7 +13,7 @@ initialise.gcode <- function(data_list,
   main.parameters <- list(alpha = list(), beta = list())
   
   for (i in 1:length(data_list)){
-
+    
     if (is.null(transfer$main.code)){
       
       initial.param <-initialise.parameters(
@@ -29,10 +29,10 @@ initialise.gcode <- function(data_list,
       
       encode <- (alpha%*%as.matrix(data_list[[i]])%*%(beta))
       code <- (pinv(t(alpha))%*%(encode)%*%pinv((beta)))
-
+      
       main.code$encode[[join$code[i]]] <- encode
       main.code$code[[join$code[i]]] <- code
-
+      
     } else {
       
       main.code <- transfer$main.code
@@ -40,7 +40,7 @@ initialise.gcode <- function(data_list,
       main.parameters$beta[[join$beta[i]]] <- transfer$main.parameters$beta[[join$beta[i]]]
       
     }
-
+    
   }
   
   for (iter in 1:2){
@@ -57,7 +57,7 @@ initialise.gcode <- function(data_list,
                                   main.code = internal.code, 
                                   converged = F,
                                   config = config
-                                  )
+      )
       
       main.parameters$alpha[[join$alpha[i]]] <- return_update$main.parameters$alpha
       main.parameters$beta[[join$beta[i]]] <- return_update$main.parameters$beta
@@ -87,7 +87,7 @@ initialise.parameters <- function(x,config){
   } else if (config$init[2]=="runif"){
     array(runif(dim(x)[2]*config$j_dim),dim=c(dim(x)[2],config$j_dim))
   } else if (config$init[2]=="irlba") {
-    (irlba::irlba(as.matrix(x),nv = config$j_dim, maxit = 300)$v)
+    (irlba::irlba(as.matrix(x),nv = config$j_dim, maxit = 500)$v)
   } else if (config$init[2]=="rsvd") {
     (rsvd::rsvd(as.matrix(x),nv = config$j_dim)$v)
   } 
@@ -97,9 +97,9 @@ initialise.parameters <- function(x,config){
   } else if (config$init[1]=="runif") {
     array(runif(config$i_dim*dim(x)[1]),dim=c(config$i_dim,dim(x)[1]))
   } else if (config$init[1]=="irlba") {
-    t(irlba::irlba(Matrix::t(x), nv = config$i_dim, maxit = 300)$v)
+    t(irlba::irlba(as.matrix(x), nu = config$i_dim, maxit = 50)$u)
   } else if (config$init[1]=="rsvd") {
-    t(rsvd::rsvd(Matrix::t(x), nv = config$i_dim)$v)
+    t(rsvd::rsvd(as.matrix(x), nu = config$i_dim)$u)
   } 
   
   pivots <- list(

@@ -7,9 +7,11 @@
 extract_join_framework(verbose = T)
 }
 \arguments{
-\item{alpha}{Joining the alpha parameters. A vector of integers, where identical integers indicate same the data axis to be joined. Axes that should not be shared are given NA.}
+\item{alpha}{Joining the alpha parameters. A vector of integers, where identical integers indicate same the data axis to be joined.}
 
-\item{beta}{Joining the beta parameters. A vector of integers, where identical integers indicate same the data axis to be joined. Axes that should not be shared are given NA.}
+\item{beta}{Joining the beta parameters. A vector of integers, where identical integers indicate same the data axis to be joined.}
+
+\item{code}{Joining the code parameters. A vector of integers, where identical integers indicate same the data axis to be joined.}
 }
 \description{
 Join data to improve modelling capacity for similar axes
