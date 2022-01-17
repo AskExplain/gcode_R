@@ -87,9 +87,9 @@ initialise.parameters <- function(x,config){
   } else if (config$init[2]=="runif"){
     array(runif(dim(x)[2]*config$j_dim),dim=c(dim(x)[2],config$j_dim))
   } else if (config$init[2]=="irlba") {
-    (irlba::irlba(as.matrix(x),nv = config$j_dim, maxit = 500)$v)
+    (irlba::irlba(as.matrix(x),nv = config$j_dim, maxit = 50)$v)
   } else if (config$init[2]=="rsvd") {
-    (rsvd::rsvd(as.matrix(x),nv = config$j_dim)$v)
+    (rsvd::rsvd(as.matrix(x),nv = config$j_dim, maxit = 50)$v)
   } 
   
   param.alpha <- if (config$init[1]=="rnorm") {
@@ -99,7 +99,7 @@ initialise.parameters <- function(x,config){
   } else if (config$init[1]=="irlba") {
     t(irlba::irlba(as.matrix(x), nu = config$i_dim, maxit = 50)$u)
   } else if (config$init[1]=="rsvd") {
-    t(rsvd::rsvd(as.matrix(x), nu = config$i_dim)$u)
+    t(rsvd::rsvd(as.matrix(x), nu = config$i_dim, maxit = 50)$u)
   } 
   
   pivots <- list(
