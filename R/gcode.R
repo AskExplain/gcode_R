@@ -1,4 +1,4 @@
-#' Generalised Canonical Procrustes
+#' Generative Encoding via Generalised Canonical Procrustes
 #'
 #' A method that uses a likelihood model to align multiple datasets via an encoding in a lower dimensional space. The parameters can be used to reduce either the feature or the sample dimensions into a smaller subspace for further embedding or prediction. To run as default, only a data list is required - please review the config parameters at gcode::extract_config(T)  .
 #'
@@ -208,16 +208,13 @@ update_set <- function(x,
                        main.code, 
                        converged,
                        config){
-
   
-  if (!converged){
-    main.parameters$alpha <- (t((x)%*%t((main.code$code)%*%t(main.parameters$beta))%*%pinv(t((main.code$code)%*%t(main.parameters$beta)))))
-  }
-  
-  main.parameters$beta <- (t(pinv(((t(main.parameters$alpha)%*%(main.code$code))))%*%t(t(main.parameters$alpha)%*%(main.code$code))%*%(x)))
-
   main.code$encode <- (main.parameters$alpha%*%(x)%*%(main.parameters$beta))
-  main.code$code <- (pinv(t(main.parameters$alpha))%*%(main.code$encode)%*%pinv(main.parameters$beta))
+  main.code$code <- pinv(t(main.parameters$alpha))%*%main.code$encode%*%pinv(main.parameters$beta)
+  
+  main.parameters$alpha <- (t((x)%*%t((main.code$code)%*%t(main.parameters$beta))%*%pinv(t((main.code$code)%*%t(main.parameters$beta)))))
+  main.parameters$beta <- (t(pinv(((t(main.parameters$alpha)%*%(main.code$code))))%*%t(t(main.parameters$alpha)%*%(main.code$code))%*%(x)))
+  
   
   return(list(main.parameters = main.parameters,
               main.code = main.code

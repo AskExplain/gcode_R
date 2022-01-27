@@ -28,7 +28,7 @@ initialise.gcode <- function(data_list,
       main.parameters$beta[[join$beta[i]]] <- beta
       
       encode <- (alpha%*%as.matrix(data_list[[i]])%*%(beta))
-      code <- (pinv(t(alpha))%*%(encode)%*%pinv((beta)))
+      code <- pinv(t(alpha))%*%encode%*%pinv(beta)
       
       main.code$encode[[join$code[i]]] <- encode
       main.code$code[[join$code[i]]] <- code
@@ -87,9 +87,9 @@ initialise.parameters <- function(x,config){
   } else if (config$init[2]=="runif"){
     array(runif(dim(x)[2]*config$j_dim),dim=c(dim(x)[2],config$j_dim))
   } else if (config$init[2]=="irlba") {
-    (irlba::irlba(as.matrix(x),nv = config$j_dim, maxit = 50)$v)
+    (irlba::irlba(as.matrix(x), nv = config$j_dim, maxit = 15)$v)
   } else if (config$init[2]=="rsvd") {
-    (rsvd::rsvd(as.matrix(x),nv = config$j_dim, maxit = 50)$v)
+    (rsvd::rsvd(as.matrix(x), nv = config$j_dim)$v)
   } 
   
   param.alpha <- if (config$init[1]=="rnorm") {
@@ -97,9 +97,9 @@ initialise.parameters <- function(x,config){
   } else if (config$init[1]=="runif") {
     array(runif(config$i_dim*dim(x)[1]),dim=c(config$i_dim,dim(x)[1]))
   } else if (config$init[1]=="irlba") {
-    t(irlba::irlba(as.matrix(x), nu = config$i_dim, maxit = 50)$u)
+    t(irlba::irlba(as.matrix(x), nu = config$i_dim, maxit = 15)$u)
   } else if (config$init[1]=="rsvd") {
-    t(rsvd::rsvd(as.matrix(x), nu = config$i_dim, maxit = 50)$u)
+    t(rsvd::rsvd(as.matrix(x), nu = config$i_dim)$u)
   } 
   
   pivots <- list(

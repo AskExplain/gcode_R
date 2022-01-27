@@ -1,0 +1,7 @@
+pandoc: 2.11.4
+pkgdown: 2.0.2
+pkgdown_sha: ~
+articles:
+  Spatial_Transcriptomic_modalities: Spatial_Transcriptomic_modalities.html
+last_built: 2022-01-27T06:48Z
+
