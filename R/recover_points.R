@@ -52,7 +52,7 @@ recover_points <- function(data_list,
               
               
               recover$encoded_covariate <- lapply(c(1:length(data_list)),function(X){
-                transformed.data <- t(main.parameters$alpha[[join$alpha[i]]])%*%(main.parameters$alpha[[join$alpha[X]]])%*%as.matrix(data_list[[X]])%*%(main.parameters$beta[[join$beta[X]]])
+                transformed.data <- as.matrix(data_list[[X]])%*%(main.parameters$beta[[join$beta[X]]])
                 return(transformed.data)
               })
               
@@ -160,35 +160,30 @@ recover_points <- function(data_list,
     if ("classification" %in% task){
       
       
-      label.projection <- c(recover$method=="label.projection")
-      
-      if (label.projection){
+      for (method in recover$method){
         
-        for (j in which(recover$design.list==0)){
+        if ("label.projection" %in% method){
           
-          label_code <- Reduce('+',lapply(c(covariate$factor[j,]),function(X){
-            main.code$code[[X]]
+          labels <- recover$labels
+          
+          recover$encoded_covariate <- lapply(c(1:length(data_list)),function(X){
+            transformed.data <- as.matrix(data_list[[X]])%*%(main.parameters$beta[[join$beta[X]]])
+            return(transformed.data)
+          })
+          
+          decoded_covariate <- do.call('cbind',lapply(c(1:length(recover$encoded_covariate)),function(X){
+            recover$encoded_covariate[[X]]
           }))
           
+          unlabel.decoded_covariate <- decoded_covariate[is.na(labels),]
+          label.decoded_covariate <- decoded_covariate[!is.na(labels),]
           
           
-          for (i in which(recover$design.list==1)){
-            
-            unlabel_code <- Reduce('+',lapply(c(covariate$factor[i,]),function(X){
-              main.code$code[[X]]
-            }))
-            
-            labels <- recover$labels
-            
-            recover$predict.list[[j]][[i]] <- apply((unlabel.decoded_covariate)%*%t(label.decoded_covariate),1,function(X){names(sort(table(labels[order(X,decreasing = T)[1]]))[1])})
-            
-          }
+          label_assign <- (unlabel.decoded_covariate)%*%t(label.decoded_covariate)
+          recover$labels[is.na(labels)] <- apply(label_assign,1,function(X){(labels[!is.na(labels)])[which(X==max(X))]})
           
         }
       }
-      
-      
-      
     }
     
   }

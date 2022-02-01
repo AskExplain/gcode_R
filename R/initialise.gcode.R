@@ -1,8 +1,10 @@
+
+
 #' @export
 initialise.gcode <- function(data_list,
-                              config,
-                              transfer,
-                              join
+                             config,
+                             transfer,
+                             join
 ){
   
   if (config$verbose){
@@ -55,7 +57,6 @@ initialise.gcode <- function(data_list,
       return_update <- update_set(x = as.matrix(data_list[[i]]),
                                   main.parameters = internal.parameters,
                                   main.code = internal.code, 
-                                  converged = F,
                                   config = config
       )
       
@@ -82,23 +83,23 @@ initialise.gcode <- function(data_list,
 #' @export
 initialise.parameters <- function(x,config){
   
-  param.beta <- if (config$init[2]=="rnorm"){
+  param.beta <- if (config$init[[2]]=="rnorm"){
     array(rnorm(dim(x)[2]*config$j_dim),dim=c(dim(x)[2],config$j_dim))
-  } else if (config$init[2]=="runif"){
+  } else if (config$init[[2]]=="runif"){
     array(runif(dim(x)[2]*config$j_dim),dim=c(dim(x)[2],config$j_dim))
-  } else if (config$init[2]=="irlba") {
-    (irlba::irlba(as.matrix(x), nv = config$j_dim, maxit = 15)$v)
-  } else if (config$init[2]=="rsvd") {
+  } else if (config$init[[2]]=="irlba") {
+    (irlba::irlba(as.matrix(x), nv = config$j_dim, maxit = 50)$v)
+  } else if (config$init[[2]]=="rsvd") {
     (rsvd::rsvd(as.matrix(x), nv = config$j_dim)$v)
   } 
   
-  param.alpha <- if (config$init[1]=="rnorm") {
+  param.alpha <- if (config$init[[1]]=="rnorm") {
     array(rnorm(config$i_dim*dim(x)[1]),dim=c(config$i_dim,dim(x)[1]))
-  } else if (config$init[1]=="runif") {
+  } else if (config$init[[1]]=="runif") {
     array(runif(config$i_dim*dim(x)[1]),dim=c(config$i_dim,dim(x)[1]))
-  } else if (config$init[1]=="irlba") {
-    t(irlba::irlba(as.matrix(x), nu = config$i_dim, maxit = 15)$u)
-  } else if (config$init[1]=="rsvd") {
+  } else if (config$init[[1]]=="irlba") {
+    t(irlba::irlba(as.matrix(x), nu = config$i_dim, maxit = 50)$u)
+  } else if (config$init[[1]]=="rsvd") {
     t(rsvd::rsvd(as.matrix(x), nu = config$i_dim)$u)
   } 
   
