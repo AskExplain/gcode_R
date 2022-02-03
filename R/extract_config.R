@@ -12,7 +12,9 @@
 #' @export
 extract_config <- function(verbose=T){
   config <- list(
-    init=c("svd"),
+    init=list(alpha="rnorm",beta="rnorm"),
+    regularise=list(a=0.5,l=1e-3),
+    bootstrap=3,
     i_dim = 30,
     j_dim = 30,
     min_iter=2,
@@ -21,11 +23,11 @@ extract_config <- function(verbose=T){
     tol=1,
     verbose = T
   )
-
+  
   if (verbose == T){
     print(config)
   }
-
+  
   return(config)
 }
 
@@ -43,7 +45,7 @@ extract_transfer_framework <- function(verbose=T){
   transfer <- list(
     main.code = NULL,
     main.parameters = list(alpha = NULL, beta = NULL)
-    )
+  )
   
   if (verbose == T){
     print(transfer)
@@ -102,4 +104,10 @@ extract_join_framework <- function(verbose=T){
   
   return(join)
 }
+
+
+
+
+
+
 
