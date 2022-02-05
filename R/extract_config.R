@@ -14,7 +14,8 @@ extract_config <- function(verbose=T){
   config <- list(
     init=list(alpha="rnorm",beta="rnorm"),
     regularise=list(a=0.5,l=1e-3),
-    bootstrap=3,
+    bootstrap=30,
+    dimension_reduction=TRUE,
     i_dim = 30,
     j_dim = 30,
     min_iter=2,
@@ -23,11 +24,11 @@ extract_config <- function(verbose=T){
     tol=1,
     verbose = T
   )
-  
+
   if (verbose == T){
     print(config)
   }
-  
+
   return(config)
 }
 
@@ -44,8 +45,9 @@ extract_config <- function(verbose=T){
 extract_transfer_framework <- function(verbose=T){
   transfer <- list(
     main.code = NULL,
-    main.parameters = list(alpha = NULL, beta = NULL)
-  )
+    main.parameters = list(alpha = NULL, beta = NULL),
+    fix = list(code = F, alpha = F, beta = F)
+    )
   
   if (verbose == T){
     print(transfer)
