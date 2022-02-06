@@ -14,7 +14,6 @@ extract_config <- function(verbose=T){
   config <- list(
     init=list(alpha="rnorm",beta="rnorm"),
     regularise=list(a=0.5,l=1e-3),
-    bootstrap=30,
     dimension_reduction=TRUE,
     i_dim = 30,
     j_dim = 30,
@@ -109,6 +108,28 @@ extract_join_framework <- function(verbose=T){
 
 
 
+
+
+
+
+
+
+#' Extract reference framework to put into gcode
+#'
+#' Which data list acts as a reference to be compared against when deeply profiling the residuals dynamically
+#' @param data_list Vector representing the reference (= 1), and the experiment (= 0)
+#' @export
+extract_reference_framework <- function(verbose=T){
+  reference <- list(data_list=c(NULL),
+                    bootstrap=30
+  )
+  
+  if (verbose == T){
+    print(reference)
+  }
+  
+  return(reference)
+}
 
 
 

@@ -14,11 +14,6 @@ initialise.gcode <- function(data_list,
   main.code <- list(code=lapply(unique(join$code),function(X){NULL}),encode=lapply(unique(join$code),function(X){NULL}))
   main.parameters <- list(alpha = lapply(unique(join$alpha),function(X){NULL}), beta = lapply(unique(join$beta),function(X){NULL}))
   
-  config_intercept <- config
-  config_intercept$init <- c("rnorm","rnorm")
-  main.parameters$alpha[[max(join$alpha)]] <- as.matrix(initialise.parameters(x = data_list[[length(data_list)]], config = config_intercept, param.type = "alpha"))
-  main.parameters$beta[[max(join$beta)]] <- as.matrix(initialise.parameters(x = data_list[[length(data_list)]], config = config_intercept, param.type = "beta"))
-    
   for (iter in 1:2){
     for (i in 1:length(data_list)){
 

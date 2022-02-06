@@ -28,13 +28,6 @@ gcode <- function(data_list,
   
   convergence.parameters <- list(count=0,score.vec=c())
   
-  # Initialise intercept
-  intercept_gcode <- diag(2)
-  data_list <- c(data_list,list(intercept_gcode))
-  join$code <- c(join$code,max(join$code))
-  join$alpha <- c(join$alpha,max(join$alpha)+1)
-  join$beta <- c(join$beta,max(join$beta)+1)
-  
   recover$predict.list <- lapply(c(1:length(data_list)),function(X){NULL})
   
   initialise.model <- initialise.gcode(data_list = data_list,
@@ -126,27 +119,35 @@ gcode <- function(data_list,
     
   }
   
-  
-  # Remove intercept
-  join$code <- join$code[-length(join$code)]
-  join$alpha <- join$alpha[-length(join$alpha)]
-  join$beta <- join$beta[-length(join$beta)]
-  
-  main.parameters$alpha <- lapply(unique(join$alpha),function(X){
-    main.parameters$alpha[[X]]
-  })
 
-  main.parameters$beta <- lapply(unique(join$beta),function(X){
-    main.parameters$beta[[X]]
-  })
+  for (k in 1:2){
+    
+    for (i in 1:length(data_list)){
+      
+      internal.parameters <- list(alpha=main.parameters$alpha[[join$alpha[i]]],
+                                  beta=main.parameters$beta[[join$beta[i]]])
+      
+      internal.code <- list(encode=main.code$encode[[join$code[i]]],
+                            code=main.code$code[[join$code[i]]])
+      
+      return_update <- update_set(x = as.matrix(data_list[[i]]),
+                                  main.parameters = internal.parameters,
+                                  main.code = internal.code, 
+                                  config = config,
+                                  fix = list(alpha=T,beta=F,code=F)
+      )
+      
+      
+      main.parameters$beta[[join$beta[i]]] <- return_update$main.parameters$beta
+      
+      main.code$code[[join$code[i]]] <- return_update$main.code$code
+      main.code$encode[[join$code[i]]] <- return_update$main.code$encode
+      
+    }
+    
+    
+  }
   
-  main.code$code <- lapply(unique(join$code),function(X){
-    main.code$code[[X]]
-  })
-  
-  main.code$encode <- lapply(unique(join$code),function(X){
-    main.code$encode[[X]]
-  })
   
   if (config$verbose){
     print("Learning has converged for gcode, beginning (if requested) dimension reduction")
@@ -213,7 +214,7 @@ update_set <- function(x,
   
   main.parameters$alpha <- if(fix$alpha){main.parameters$alpha}else{soft_threshold(main.parameters$alpha,config)}
   main.parameters$beta <- if(fix$beta){main.parameters$beta}else{soft_threshold( main.parameters$beta,config)}
-  
+
   main.code$encode <- if(fix$code){main.code$code}else{(main.parameters$alpha%*%(x)%*%(main.parameters$beta))}
   main.code$code <- if(fix$code){main.code$code}else{pinv(t(main.parameters$alpha))%*%main.code$encode%*%pinv(main.parameters$beta)}
   
