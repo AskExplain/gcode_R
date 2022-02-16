@@ -17,7 +17,6 @@ extract_config <- function(verbose=T){
     dimension_reduction=TRUE,
     i_dim = 30,
     j_dim = 30,
-    min_iter=2,
     max_iter=350,
     seed = 1,
     tol=1,
@@ -45,7 +44,7 @@ extract_transfer_framework <- function(verbose=T){
   transfer <- list(
     main.code = NULL,
     main.parameters = list(alpha = NULL, beta = NULL),
-    fix = list(code = F, alpha = F, beta = F)
+    fix = list(code = F, encode = F, alpha = F, beta = F)
     )
   
   if (verbose == T){
@@ -95,9 +94,9 @@ extract_recovery_framework <- function(verbose=T){
 #' @param code Joining the code parameters. A vector of integers, where identical integers indicate same the data axis to be joined.
 #' @export
 extract_join_framework <- function(verbose=T){
-  join <- list(alpha=NULL,
-               beta=NULL,
-               code=NULL)
+  join <- list(complete=list(alpha=NULL,beta=NULL,code=NULL),
+               labels=list(alpha=NULL,beta=NULL)
+  )
   
   if (verbose == T){
     print(join)
@@ -105,32 +104,3 @@ extract_join_framework <- function(verbose=T){
   
   return(join)
 }
-
-
-
-
-
-
-
-
-
-#' Extract reference framework to put into gcode
-#'
-#' Which data list acts as a reference to be compared against when deeply profiling the residuals dynamically
-#' @param data_list Vector representing the reference (= 1), and the experiment (= 0)
-#' @export
-extract_reference_framework <- function(verbose=T){
-  reference <- list(data_list=c(NULL),
-                    bootstrap=30
-  )
-  
-  if (verbose == T){
-    print(reference)
-  }
-  
-  return(reference)
-}
-
-
-
-
