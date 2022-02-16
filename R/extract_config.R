@@ -14,20 +14,19 @@ extract_config <- function(verbose=T){
   config <- list(
     init=list(alpha="rnorm",beta="rnorm"),
     regularise=list(a=0.5,l=1e-3),
-    bootstrap=3,
+    dimension_reduction=TRUE,
     i_dim = 30,
     j_dim = 30,
-    min_iter=2,
     max_iter=350,
     seed = 1,
     tol=1,
     verbose = T
   )
-  
+
   if (verbose == T){
     print(config)
   }
-  
+
   return(config)
 }
 
@@ -44,8 +43,9 @@ extract_config <- function(verbose=T){
 extract_transfer_framework <- function(verbose=T){
   transfer <- list(
     main.code = NULL,
-    main.parameters = list(alpha = NULL, beta = NULL)
-  )
+    main.parameters = list(alpha = NULL, beta = NULL),
+    fix = list(code = F, encode = F, alpha = F, beta = F)
+    )
   
   if (verbose == T){
     print(transfer)
@@ -94,9 +94,9 @@ extract_recovery_framework <- function(verbose=T){
 #' @param code Joining the code parameters. A vector of integers, where identical integers indicate same the data axis to be joined.
 #' @export
 extract_join_framework <- function(verbose=T){
-  join <- list(alpha=NULL,
-               beta=NULL,
-               code=NULL)
+  join <- list(complete=list(alpha=NULL,beta=NULL,code=NULL),
+               labels=list(alpha=NULL,beta=NULL)
+  )
   
   if (verbose == T){
     print(join)
@@ -104,10 +104,3 @@ extract_join_framework <- function(verbose=T){
   
   return(join)
 }
-
-
-
-
-
-
-

@@ -1,78 +1,68 @@
+
+
 #' @export
 initialise.gcode <- function(data_list,
-                              config,
-                              transfer,
-                              join
+                             config,
+                             transfer,
+                             join
 ){
   
   if (config$verbose){
-    print(paste("Initialising data with : ",config$init,sep=""))
+    print(c(paste("Initialising alpha with : ",config$init[1],sep=""),
+            paste("Initialising beta with : ",config$init[2],sep=""))
+    )
   }
   
-  main.code <- list(code=list(),encode=list())
-  main.parameters <- list(alpha = list(), beta = list())
+  main.code <- list(code=lapply(unique(join$complete$code),function(X){NULL}),encode=lapply(unique(join$complete$code),function(X){NULL}))
+  main.parameters <- list(alpha = lapply(unique(join$complete$alpha),function(X){NULL}), beta = lapply(unique(join$complete$beta),function(X){NULL}))
+  common.template <- list(alpha = NULL, beta = NULL)
   
   for (i in 1:length(data_list)){
     
-    if (is.null(transfer$main.code)){
-      
-      initial.param <-initialise.parameters(
-        x = as.matrix(data_list[[i]]),
-        config = config
-      )
-      
-      alpha <- initial.param$pivot_x.sample
-      beta <- initial.param$pivot_x.feature
-      
-      main.parameters$alpha[[join$alpha[i]]] <- alpha
-      main.parameters$beta[[join$beta[i]]] <- beta
-      
-      encode <- (alpha%*%as.matrix(data_list[[i]])%*%(beta))
-      code <- (pinv(t(alpha))%*%(encode)%*%pinv((beta)))
-      
-      main.code$encode[[join$code[i]]] <- encode
-      main.code$code[[join$code[i]]] <- code
-      
-    } else {
-      
-      main.code <- transfer$main.code
-      main.parameters$alpha[[join$alpha[i]]] <- transfer$main.parameters$alpha[[join$alpha[i]]]
-      main.parameters$beta[[join$beta[i]]] <- transfer$main.parameters$beta[[join$beta[i]]]
-      
+    if (is.null(main.parameters$alpha[[join$complete$alpha[i]]])){
+      if (!is.null(transfer$main.parameters$alpha[[join$complete$alpha[i]]])){
+        main.parameters$alpha[[join$complete$alpha[i]]] <- transfer$main.parameters$alpha[[join$complete$alpha[i]]]
+      } else {
+        main.parameters$alpha[[join$complete$alpha[i]]] <- as.matrix(initialise.parameters(x = data_list[[i]],config = config, param.type = "alpha"))
+      }
     }
     
-  }
-  
-  for (iter in 1:2){
-    for (i in 1:length(data_list)){
-      
-      internal.parameters <- list(alpha=main.parameters$alpha[[join$alpha[i]]],
-                                  beta=main.parameters$beta[[join$beta[i]]])
-      
-      internal.code <- list(encode=main.code$encode[[join$code[i]]],
-                            code=main.code$code[[join$code[i]]])
-      
-      return_update <- update_set(x = as.matrix(data_list[[i]]),
-                                  main.parameters = internal.parameters,
-                                  main.code = internal.code, 
-                                  converged = F,
-                                  config = config
-      )
-      
-      main.parameters$alpha[[join$alpha[i]]] <- return_update$main.parameters$alpha
-      main.parameters$beta[[join$beta[i]]] <- return_update$main.parameters$beta
-      
-      
-      main.code$code[[join$code[i]]] <- return_update$main.code$code
-      main.code$encode[[join$code[i]]] <- return_update$main.code$encode
-      
+    
+    if (is.null(main.parameters$beta[[join$complete$beta[i]]])){
+      if (!is.null(transfer$main.parameters$beta[[join$complete$beta[i]]])){
+        main.parameters$beta[[join$complete$beta[i]]] <- transfer$main.parameters$beta[[join$complete$beta[i]]]
+      } else {
+        main.parameters$beta[[join$complete$beta[i]]] <- as.matrix(initialise.parameters(x = data_list[[i]],config = config, param.type = "beta"))
+      }
     }
+    
+    
+    if (is.null(common.template$alpha)){
+      common.template$alpha <- main.parameters$alpha[[join$complete$alpha[i]]][,row.names(data_list[[i]])%in%join$labels$alpha]
+    }
+    if (is.null(common.template$beta)){
+      common.template$beta <- main.parameters$beta[[join$complete$beta[i]]][colnames(data_list[[i]])%in%join$labels$beta,]
+    }
+    
+    
+    if (is.null(main.code$code[[join$complete$code[i]]]) | is.null(main.code$encode[[join$complete$code[i]]])){
+      if (!is.null(transfer$main.code$code[[join$complete$code[i]]])){
+        main.code$encode[[join$complete$code[i]]] <- transfer$main.code$encode[[join$complete$code[i]]]
+        main.code$code[[join$complete$code[i]]] <- transfer$main.code$code[[join$complete$code[i]]]
+      } else {
+        main.code$encode[[join$complete$code[i]]] <- main.parameters$alpha[[join$complete$alpha[i]]]%*%as.matrix(data_list[[i]])%*%main.parameters$beta[[join$complete$beta[i]]]
+        main.code$code[[join$complete$code[i]]] <- MASS::ginv(main.parameters$alpha[[join$complete$alpha[i]]]%*%t(main.parameters$alpha[[join$complete$alpha[i]]]))%*%main.code$encode[[join$complete$code[i]]]%*%MASS::ginv(t(main.parameters$beta[[join$complete$beta[i]]])%*%main.parameters$beta[[join$complete$beta[i]]])
+      }
+    }
+    
+    
   }
   
   return(
     list(
       main.parameters = main.parameters,
-      main.code = main.code
+      main.code = main.code,
+      common.template = common.template
     )
   )
   
@@ -80,34 +70,32 @@ initialise.gcode <- function(data_list,
 
 
 #' @export
-initialise.parameters <- function(x,config){
+initialise.parameters <- function(x,config,param.type){
   
-  param.beta <- if (config$init[2]=="rnorm"){
-    array(rnorm(dim(x)[2]*config$j_dim),dim=c(dim(x)[2],config$j_dim))
-  } else if (config$init[2]=="runif"){
-    array(runif(dim(x)[2]*config$j_dim),dim=c(dim(x)[2],config$j_dim))
-  } else if (config$init[2]=="irlba") {
-    (irlba::irlba(as.matrix(x),nv = config$j_dim, maxit = 50)$v)
-  } else if (config$init[2]=="rsvd") {
-    (rsvd::rsvd(as.matrix(x),nv = config$j_dim, maxit = 50)$v)
-  } 
+  if (param.type=="beta"){
+    main.param <- if (config$init[[2]]=="rnorm"){
+      array(rnorm(dim(x)[2]*config$j_dim),dim=c(dim(x)[2],config$j_dim))
+    } else if (config$init[[2]]=="runif"){
+      array(runif(dim(x)[2]*config$j_dim),dim=c(dim(x)[2],config$j_dim))
+    } else if (config$init[[2]]=="irlba") {
+      (irlba::irlba(as.matrix(x), nv = config$j_dim, maxit = 5)$v)
+    } else if (config$init[[2]]=="rsvd") {
+      (rsvd::rsvd(as.matrix(x), nv = config$j_dim)$v)
+    } 
+  }
   
-  param.alpha <- if (config$init[1]=="rnorm") {
-    array(rnorm(config$i_dim*dim(x)[1]),dim=c(config$i_dim,dim(x)[1]))
-  } else if (config$init[1]=="runif") {
-    array(runif(config$i_dim*dim(x)[1]),dim=c(config$i_dim,dim(x)[1]))
-  } else if (config$init[1]=="irlba") {
-    t(irlba::irlba(as.matrix(x), nu = config$i_dim, maxit = 50)$u)
-  } else if (config$init[1]=="rsvd") {
-    t(rsvd::rsvd(as.matrix(x), nu = config$i_dim, maxit = 50)$u)
-  } 
+  if (param.type=="alpha"){
+    main.param <- if (config$init[[1]]=="rnorm") {
+      array(rnorm(config$i_dim*dim(x)[1]),dim=c(config$i_dim,dim(x)[1]))
+    } else if (config$init[[1]]=="runif") {
+      array(runif(config$i_dim*dim(x)[1]),dim=c(config$i_dim,dim(x)[1]))
+    } else if (config$init[[1]]=="irlba") {
+      t(irlba::irlba(as.matrix(x), nu = config$i_dim, maxit = 5)$u)
+    } else if (config$init[[1]]=="rsvd") {
+      t(rsvd::rsvd(as.matrix(x), nu = config$i_dim)$u)
+    } 
+  }
   
-  pivots <- list(
-    pivot_x.sample = as.matrix(param.alpha),
-    pivot_x.feature = as.matrix(param.beta)  
-  )
-  
-  
-  return(pivots)
+  return(main.param)
   
 }

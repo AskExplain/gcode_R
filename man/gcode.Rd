@@ -2,7 +2,7 @@
 % Please edit documentation in R/gcode.R
 \name{gcode}
 \alias{gcode}
-\title{Generalised Canonical Procrustes}
+\title{Generative Encoding via Generalised Canonical Procrustes}
 \usage{
 gcode(
   data_list,
