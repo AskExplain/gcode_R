@@ -1,5 +1,3 @@
-
-
 #' @export
 initialise.gcode <- function(data_list,
                              config,
@@ -13,17 +11,26 @@ initialise.gcode <- function(data_list,
     )
   }
   
+  data_list <- lapply(data_list,function(X){
+    X <- gcode::prepare_data(X,
+                        log=config$transform$log,
+                        center=config$transform$center,
+                        scale.norm=config$transform$norm
+                        )
+  })
+  
   main.code <- list(code=lapply(unique(join$complete$code),function(X){NULL}),encode=lapply(unique(join$complete$code),function(X){NULL}))
-  main.parameters <- list(alpha = lapply(unique(join$complete$alpha),function(X){NULL}), beta = lapply(unique(join$complete$beta),function(X){NULL}))
+  main.parameters <- list(alpha = lapply(unique(join$complete$alpha),function(X){NULL}), beta = lapply(unique(join$complete$beta),function(X){NULL}),
+                          intercept = lapply(unique(1:length(join$complete$data_list)),function(X){NULL}))
   common.template <- list(alpha = NULL, beta = NULL)
   
-  for (i in 1:length(data_list)){
+  for (i in 1:length(join$complete$data_list)){
     
     if (is.null(main.parameters$alpha[[join$complete$alpha[i]]])){
       if (!is.null(transfer$main.parameters$alpha[[join$complete$alpha[i]]])){
         main.parameters$alpha[[join$complete$alpha[i]]] <- transfer$main.parameters$alpha[[join$complete$alpha[i]]]
       } else {
-        main.parameters$alpha[[join$complete$alpha[i]]] <- as.matrix(initialise.parameters(x = data_list[[i]],config = config, param.type = "alpha"))
+        main.parameters$alpha[[join$complete$alpha[i]]] <- as.matrix(initialise.parameters(x = data_list[[join$complete$data_list[i]]],config = config, param.type = "alpha"))
       }
     }
     
@@ -32,29 +39,37 @@ initialise.gcode <- function(data_list,
       if (!is.null(transfer$main.parameters$beta[[join$complete$beta[i]]])){
         main.parameters$beta[[join$complete$beta[i]]] <- transfer$main.parameters$beta[[join$complete$beta[i]]]
       } else {
-        main.parameters$beta[[join$complete$beta[i]]] <- as.matrix(initialise.parameters(x = data_list[[i]],config = config, param.type = "beta"))
+        main.parameters$beta[[join$complete$beta[i]]] <- as.matrix(initialise.parameters(x = data_list[[join$complete$data_list[i]]],config = config, param.type = "beta"))
       }
     }
     
     
+    
     if (is.null(common.template$alpha)){
-      common.template$alpha <- main.parameters$alpha[[join$complete$alpha[i]]][,row.names(data_list[[i]])%in%join$labels$alpha]
+      common.template$alpha <- main.parameters$alpha[[join$complete$alpha[i]]][,row.names(data_list[[join$complete$data_list[i]]])%in%join$labels$alpha]
     }
     if (is.null(common.template$beta)){
-      common.template$beta <- main.parameters$beta[[join$complete$beta[i]]][colnames(data_list[[i]])%in%join$labels$beta,]
+      common.template$beta <- main.parameters$beta[[join$complete$beta[i]]][colnames(data_list[[join$complete$data_list[i]]])%in%join$labels$beta,]
     }
-    
     
     if (is.null(main.code$code[[join$complete$code[i]]]) | is.null(main.code$encode[[join$complete$code[i]]])){
       if (!is.null(transfer$main.code$code[[join$complete$code[i]]])){
         main.code$encode[[join$complete$code[i]]] <- transfer$main.code$encode[[join$complete$code[i]]]
         main.code$code[[join$complete$code[i]]] <- transfer$main.code$code[[join$complete$code[i]]]
       } else {
-        main.code$encode[[join$complete$code[i]]] <- main.parameters$alpha[[join$complete$alpha[i]]]%*%as.matrix(data_list[[i]])%*%main.parameters$beta[[join$complete$beta[i]]]
-        main.code$code[[join$complete$code[i]]] <- MASS::ginv(main.parameters$alpha[[join$complete$alpha[i]]]%*%t(main.parameters$alpha[[join$complete$alpha[i]]]))%*%main.code$encode[[join$complete$code[i]]]%*%MASS::ginv(t(main.parameters$beta[[join$complete$beta[i]]])%*%main.parameters$beta[[join$complete$beta[i]]])
+        main.code$encode[[join$complete$code[i]]] <- main.parameters$alpha[[join$complete$alpha[i]]]%*%as.matrix(data_list[[join$complete$data_list[i]]])%*%main.parameters$beta[[join$complete$beta[i]]]
+        main.code$code[[join$complete$code[i]]] <- as.matrix(MASS::ginv(main.parameters$alpha[[join$complete$alpha[i]]]%*%t(main.parameters$alpha[[join$complete$alpha[i]]]))%*%main.code$encode[[join$complete$code[i]]]%*%MASS::ginv(t(main.parameters$beta[[join$complete$beta[i]]])%*%main.parameters$beta[[join$complete$beta[i]]]))
       }
     }
     
+    
+    if (is.null(main.parameters$intercept[[i]])){
+      if (!is.null(transfer$main.parameters$intercept[[i]])){
+        main.parameters$intercept[[i]] <- transfer$main.parameters$intercept[[i]]
+      } else {
+        main.parameters$intercept[[i]] <- colMeans(data_list[[join$complete$data_list[i]]] - t(main.parameters$alpha[[join$complete$alpha[i]]])%*%main.code$code[[join$complete$code[i]]]%*%t(main.parameters$beta[[join$complete$beta[i]]]))
+      }
+    }
     
   }
   
@@ -78,7 +93,7 @@ initialise.parameters <- function(x,config,param.type){
     } else if (config$init[[2]]=="runif"){
       array(runif(dim(x)[2]*config$j_dim),dim=c(dim(x)[2],config$j_dim))
     } else if (config$init[[2]]=="irlba") {
-      (irlba::irlba(as.matrix(x), nv = config$j_dim, maxit = 5)$v)
+      (irlba::irlba(as.matrix(x), nv = config$j_dim, maxit = 15)$v)
     } else if (config$init[[2]]=="rsvd") {
       (rsvd::rsvd(as.matrix(x), nv = config$j_dim)$v)
     } 
@@ -90,7 +105,7 @@ initialise.parameters <- function(x,config,param.type){
     } else if (config$init[[1]]=="runif") {
       array(runif(config$i_dim*dim(x)[1]),dim=c(config$i_dim,dim(x)[1]))
     } else if (config$init[[1]]=="irlba") {
-      t(irlba::irlba(as.matrix(x), nu = config$i_dim, maxit = 5)$u)
+      t(irlba::irlba(as.matrix(x), nu = config$i_dim, maxit = 15)$u)
     } else if (config$init[[1]]=="rsvd") {
       t(rsvd::rsvd(as.matrix(x), nu = config$i_dim)$u)
     } 

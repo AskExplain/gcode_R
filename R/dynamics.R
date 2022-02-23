@@ -3,7 +3,8 @@ dgcode <- function(data_list,
                    config = gcode::extract_config(verbose = F),
                    transfer = gcode::extract_transfer_framework(verbose = F),
                    recover = gcode::extract_recovery_framework(verbose = F),
-                   join = gcode::extract_join_framework(verbose=F)
+                   join = gcode::extract_join_framework(verbose=F),
+                   references = gcode::extract_references_framework(F)
 ){
   
   dynamic_list_of_models <- list()
@@ -18,11 +19,11 @@ dgcode <- function(data_list,
     config$verbose <- F
     print(paste("Bootstrap: iteration   ",i,"   of   ",dim(combin)[1],"   ...",sep=""))
     
-    gcode.model <- gcode::gcode(data_list = data_list, config = config, join = join, transfer = transfer, recover = recover)
+    gcode.model <- gcode::gcode(data_list = data_list, config = config, join = join, transfer = transfer, recover = recover, references = references)
     dynamic_list_of_models <- c(dynamic_list_of_models,list(gcode.model))
     
-    data_list <- lapply(c(1:length(data_list)),function(X){
-      data_list[[X]] - t(gcode.model$main.parameters$alpha[[join$complete$alpha[X]]])%*%gcode.model$main.code$code[[join$complete$code[X]]]%*%t(gcode.model$main.parameters$beta[[join$complete$beta[X]]])
+    data_list <- lapply(c(which(references$data_list==1)),function(X){
+      data_list[[join$complete$data_list[X]]] - t(gcode.model$main.parameters$alpha[[join$complete$alpha[X]]])%*%gcode.model$main.code$code[[join$complete$code[X]]]%*%t(gcode.model$main.parameters$beta[[join$complete$beta[X]]])
     })
     
   }

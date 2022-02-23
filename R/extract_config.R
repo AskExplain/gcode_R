@@ -12,9 +12,10 @@
 #' @export
 extract_config <- function(verbose=T){
   config <- list(
-    init=list(alpha="rnorm",beta="rnorm"),
-    regularise=list(a=0.5,l=1e-3),
-    dimension_reduction=TRUE,
+    init=list(alpha="irlba",beta="irlba"),
+    transform=list(log=F,center=F,norm=F),
+    regularise=list(a=0,l=0),
+    dimension_reduction=FALSE,
     i_dim = 30,
     j_dim = 30,
     max_iter=350,
@@ -43,8 +44,8 @@ extract_config <- function(verbose=T){
 extract_transfer_framework <- function(verbose=T){
   transfer <- list(
     main.code = NULL,
-    main.parameters = list(alpha = NULL, beta = NULL),
-    fix = list(code = F, encode = F, alpha = F, beta = F)
+    main.parameters = list(alpha = NULL, beta = NULL, intercept = NULL),
+    fix = list(code = F, encode = F, alpha = F, beta = F, intercept = F)
     )
   
   if (verbose == T){
@@ -94,7 +95,7 @@ extract_recovery_framework <- function(verbose=T){
 #' @param code Joining the code parameters. A vector of integers, where identical integers indicate same the data axis to be joined.
 #' @export
 extract_join_framework <- function(verbose=T){
-  join <- list(complete=list(alpha=NULL,beta=NULL,code=NULL),
+  join <- list(complete=list(data_list=NULL,alpha=NULL,beta=NULL,code=NULL),
                labels=list(alpha=NULL,beta=NULL)
   )
   
@@ -103,4 +104,27 @@ extract_join_framework <- function(verbose=T){
   }
   
   return(join)
+}
+
+
+
+
+
+
+
+#' Extract join framework to put into gcode
+#'
+#' Join data to improve modelling capacity for similar axes
+#' @param alpha Joining the alpha parameters. A vector of integers, where identical integers indicate same the data axis to be joined.
+#' @param beta Joining the beta parameters. A vector of integers, where identical integers indicate same the data axis to be joined.
+#' @param code Joining the code parameters. A vector of integers, where identical integers indicate same the data axis to be joined.
+#' @export
+extract_references_framework <- function(verbose=T){
+  references <- list(data_list=NULL)
+  
+  if (verbose == T){
+    print(references)
+  }
+  
+  return(references)
 }
