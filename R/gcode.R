@@ -38,7 +38,6 @@ gcode <- function(data_list,
   
   main.parameters <- initialise.model$main.parameters
   main.code <- initialise.model$main.code
-  common.template <- initialise.model$common.template
   
   if (config$verbose){
     print(paste("Beginning gcode learning with:    Sample dimension reduction (config$i_dim): ",config$i_dim, "    Feature dimension reduction (config$j_dim): ", config$j_dim, "    Latent invariant dimension (config$k_dim): ", config$k_dim, "    Tolerance Threshold: ", config$tol, "   Maximum number of iterations: ", config$max_iter, "   Verbose: ", config$verbose, sep=""))
@@ -47,50 +46,39 @@ gcode <- function(data_list,
   
   while (T){
     
-    prev_code <- main.code
-    
     for (i in 1:length(join$complete$data_list)){
       
       internal.parameters <- list(alpha=main.parameters$alpha[[join$complete$alpha[i]]],
                                   beta=main.parameters$beta[[join$complete$beta[i]]],
-                                  intercept=main.parameters$intercept[[i]]
-                                  )
+                                  intercept=main.parameters$intercept[[join$complete$data_list[i]]]
+      )
       
       internal.code <- list(encode=main.code$encode[[join$complete$code[i]]],
                             code=main.code$code[[join$complete$code[i]]])
-      
-      internal.parameters$alpha[,join$labels$alpha] <- common.template$alpha
-      internal.parameters$beta[,join$labels$beta] <- common.template$beta
       
       return_update <- update_set(x = as.matrix(data_list[[join$complete$data_list[i]]]),
                                   main.parameters = internal.parameters,
                                   main.code = internal.code, 
                                   config = config,
                                   fix = transfer$fix
-                                  )
+      )
       
       main.parameters$alpha[[join$complete$alpha[i]]] <- return_update$main.parameters$alpha
       main.parameters$beta[[join$complete$beta[i]]] <- return_update$main.parameters$beta
       
-      common.template$alpha <- main.parameters$alpha[[join$complete$alpha[i]]][,row.names(data_list[[join$complete$data_list[i]]])%in%join$labels$alpha]
-      common.template$beta <- main.parameters$beta[[join$complete$beta[i]]][colnames(data_list[[join$complete$data_list[i]]])%in%join$labels$beta,]
-      
-      main.parameters$alpha[[join$complete$alpha[i]]][,row.names(data_list[[join$complete$data_list[i]]])%in%join$labels$alpha] <- return_update$main.parameters$alpha[,row.names(data_list[[join$complete$data_list[i]]])%in%join$labels$alpha]
-      main.parameters$bera[[i]][colnames(data_list[[join$complete$data_list[i]]])%in%join$labels$beta,] <- return_update$main.parameters$beta[colnames(data_list[[join$complete$data_list[i]]])%in%join$labels$beta,]
-      
       main.code$code[[join$complete$code[i]]] <- return_update$main.code$code
       main.code$encode[[join$complete$code[i]]] <- return_update$main.code$encode
-
-      main.parameters$intercept[[i]] <- return_update$main.parameters$intercept
+      
+      main.parameters$intercept[[join$complete$data_list[i]]] <- return_update$main.parameters$intercept
       
     }
     
-    total.mse <- matrix.residuals <- Reduce("+",lapply(c(1:length(join$complete$code)),function(X){
+    total.mse <- matrix.residuals <- Reduce("+",lapply(c(join$complete$data_list),function(X){
       
-      mean(abs(main.code$encode[[join$complete$code[X]]] - prev_code$encode[[join$complete$code[X]]]))
+      mean(abs(main.parameters$intercept[[join$complete$data_list[i]]]))
       
     }))/length(join$complete$data_list)
-  
+    
     # Check convergence
     convergence.parameters$score.vec <- c(convergence.parameters$score.vec, total.mse)
     MSE <- tail(convergence.parameters$score.vec,1)
@@ -134,8 +122,6 @@ gcode <- function(data_list,
     main.parameters = main.parameters,
     
     main.code = main.code,
-    
-    common.template = common.template,
     
     recover =  recover,
     
@@ -187,16 +173,18 @@ update_set <- function(x,
                        config,
                        fix){
   
+  main.code$code <- if(fix$code){main.code$code}else{pinv(t(main.parameters$alpha))%*%main.code$encode%*%pinv(main.parameters$beta)}
+
   main.parameters$alpha <- if(fix$alpha){main.parameters$alpha}else{(t((x - main.parameters$intercept)%*%t((main.code$code)%*%t(main.parameters$beta))%*%pinv(t((main.code$code)%*%t(main.parameters$beta)))))}
   main.parameters$beta <- if(fix$beta){main.parameters$beta}else{(t(pinv(((t(main.parameters$alpha)%*%(main.code$code))))%*%t(t(main.parameters$alpha)%*%(main.code$code))%*%(x - main.parameters$intercept)))}
   
   main.parameters$alpha <- if(fix$alpha){main.parameters$alpha}else{soft_threshold(main.parameters$alpha,config)}
   main.parameters$beta <- if(fix$beta){main.parameters$beta}else{soft_threshold( main.parameters$beta,config)}
   
-  main.code$encode <- if(fix$encode){main.code$encode}else{(main.parameters$alpha%*%(x - main.parameters$intercept)%*%(main.parameters$beta))}
-  main.code$code <- if(fix$code){main.code$code}else{pinv(t(main.parameters$alpha))%*%main.code$encode%*%pinv(main.parameters$beta)}
+  main.parameters$intercept <- if(fix$intercept){main.parameters$intercept}else{colMeans(x - t(main.parameters$alpha)%*%(main.code$code)%*%t(main.parameters$beta))}
   
-  main.parameters$intercept <- colMeans(x - t(main.parameters$alpha)%*%main.code$code%*%t(main.parameters$beta))
+  main.code$encode <- if(fix$encode){main.code$encode}else{(main.parameters$alpha%*%(x - main.parameters$intercept)%*%(main.parameters$beta))}
+  
   
   return(list(main.parameters = main.parameters,
               main.code = main.code

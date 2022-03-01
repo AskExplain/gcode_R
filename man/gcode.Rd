@@ -9,7 +9,8 @@ gcode(
   config = gcode::extract_config(verbose = F),
   transfer = gcode::extract_transfer_framework(verbose = F),
   recover = gcode::extract_recovery_framework(verbose = F),
-  join = gcode::extract_join_framework(verbose = F)
+  join = gcode::extract_join_framework(verbose = F),
+  references = gcode::extract_references_framework(F)
 )
 }
 \arguments{

@@ -22,8 +22,7 @@ initialise.gcode <- function(data_list,
   main.code <- list(code=lapply(unique(join$complete$code),function(X){NULL}),encode=lapply(unique(join$complete$code),function(X){NULL}))
   main.parameters <- list(alpha = lapply(unique(join$complete$alpha),function(X){NULL}), beta = lapply(unique(join$complete$beta),function(X){NULL}),
                           intercept = lapply(unique(1:length(join$complete$data_list)),function(X){NULL}))
-  common.template <- list(alpha = NULL, beta = NULL)
-  
+
   for (i in 1:length(join$complete$data_list)){
     
     if (is.null(main.parameters$alpha[[join$complete$alpha[i]]])){
@@ -34,7 +33,6 @@ initialise.gcode <- function(data_list,
       }
     }
     
-    
     if (is.null(main.parameters$beta[[join$complete$beta[i]]])){
       if (!is.null(transfer$main.parameters$beta[[join$complete$beta[i]]])){
         main.parameters$beta[[join$complete$beta[i]]] <- transfer$main.parameters$beta[[join$complete$beta[i]]]
@@ -43,31 +41,27 @@ initialise.gcode <- function(data_list,
       }
     }
     
-    
-    
-    if (is.null(common.template$alpha)){
-      common.template$alpha <- main.parameters$alpha[[join$complete$alpha[i]]][,row.names(data_list[[join$complete$data_list[i]]])%in%join$labels$alpha]
-    }
-    if (is.null(common.template$beta)){
-      common.template$beta <- main.parameters$beta[[join$complete$beta[i]]][colnames(data_list[[join$complete$data_list[i]]])%in%join$labels$beta,]
-    }
-    
-    if (is.null(main.code$code[[join$complete$code[i]]]) | is.null(main.code$encode[[join$complete$code[i]]])){
+    if (is.null(main.code$encode[[join$complete$code[i]]])){
       if (!is.null(transfer$main.code$code[[join$complete$code[i]]])){
         main.code$encode[[join$complete$code[i]]] <- transfer$main.code$encode[[join$complete$code[i]]]
-        main.code$code[[join$complete$code[i]]] <- transfer$main.code$code[[join$complete$code[i]]]
       } else {
         main.code$encode[[join$complete$code[i]]] <- main.parameters$alpha[[join$complete$alpha[i]]]%*%as.matrix(data_list[[join$complete$data_list[i]]])%*%main.parameters$beta[[join$complete$beta[i]]]
-        main.code$code[[join$complete$code[i]]] <- as.matrix(MASS::ginv(main.parameters$alpha[[join$complete$alpha[i]]]%*%t(main.parameters$alpha[[join$complete$alpha[i]]]))%*%main.code$encode[[join$complete$code[i]]]%*%MASS::ginv(t(main.parameters$beta[[join$complete$beta[i]]])%*%main.parameters$beta[[join$complete$beta[i]]]))
+      }
+    }
+
+    if (is.null(main.code$code[[join$complete$code[i]]])){
+      if (!is.null(transfer$main.code$code[[join$complete$code[i]]])){
+        main.code$code[[join$complete$code[i]]] <- transfer$main.code$code[[join$complete$code[i]]]
+      } else {
+        main.code$code[[join$complete$code[i]]] <- as.matrix(MASS::ginv(main.parameters$alpha[[join$complete$alpha[i]]]%*%t(main.parameters$alpha[[join$complete$alpha[i]]]))%*%main.code$encode[[join$complete$data_list[i]]]%*%MASS::ginv(t(main.parameters$beta[[join$complete$beta[i]]])%*%main.parameters$beta[[join$complete$beta[i]]]))
       }
     }
     
-    
-    if (is.null(main.parameters$intercept[[i]])){
-      if (!is.null(transfer$main.parameters$intercept[[i]])){
-        main.parameters$intercept[[i]] <- transfer$main.parameters$intercept[[i]]
+    if (is.null(main.parameters$intercept[[join$complete$data_list[i]]])){
+      if (!is.null(transfer$main.parameters$intercept[[join$complete$data_list[i]]])){
+        main.parameters$intercept[[join$complete$data_list[i]]] <- transfer$main.parameters$intercept[[join$complete$data_list[i]]]
       } else {
-        main.parameters$intercept[[i]] <- colMeans(data_list[[join$complete$data_list[i]]] - t(main.parameters$alpha[[join$complete$alpha[i]]])%*%main.code$code[[join$complete$code[i]]]%*%t(main.parameters$beta[[join$complete$beta[i]]]))
+        main.parameters$intercept[[join$complete$data_list[i]]] <- colMeans(data_list[[join$complete$data_list[i]]] - t(main.parameters$alpha[[join$complete$alpha[i]]])%*%main.code$code[[join$complete$code[i]]]%*%t(main.parameters$beta[[join$complete$beta[i]]]))
       }
     }
     
@@ -76,9 +70,8 @@ initialise.gcode <- function(data_list,
   return(
     list(
       main.parameters = main.parameters,
-      main.code = main.code,
-      common.template = common.template
-    )
+      main.code = main.code
+      )
   )
   
 }

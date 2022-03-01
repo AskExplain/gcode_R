@@ -22,8 +22,8 @@ dgcode <- function(data_list,
     gcode.model <- gcode::gcode(data_list = data_list, config = config, join = join, transfer = transfer, recover = recover, references = references)
     dynamic_list_of_models <- c(dynamic_list_of_models,list(gcode.model))
     
-    data_list <- lapply(c(which(references$data_list==1)),function(X){
-      data_list[[join$complete$data_list[X]]] - t(gcode.model$main.parameters$alpha[[join$complete$alpha[X]]])%*%gcode.model$main.code$code[[join$complete$code[X]]]%*%t(gcode.model$main.parameters$beta[[join$complete$beta[X]]])
+    data_list <- lapply(c(1:length(join$complete$data_list)),function(X){
+      data_list[[join$complete$data_list[X]]] - t(gcode.model$main.parameters$alpha[[join$complete$alpha[X]]])%*%gcode.model$main.code$code[[join$complete$code[X]]]%*%t(gcode.model$main.parameters$beta[[join$complete$beta[X]]]) - gcode.model$main.parameters$intercept[[join$complete$data_list[X]]]
     })
     
   }
