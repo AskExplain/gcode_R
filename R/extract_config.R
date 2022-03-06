@@ -18,6 +18,7 @@ extract_config <- function(verbose=T){
     dimension_reduction=FALSE,
     i_dim = 30,
     j_dim = 30,
+    k_dim = 100,
     max_iter=350,
     seed = 1,
     tol=1,
@@ -95,7 +96,7 @@ extract_recovery_framework <- function(verbose=T){
 #' @param code Joining the code parameters. A vector of integers, where identical integers indicate same the data axis to be joined.
 #' @export
 extract_join_framework <- function(verbose=T){
-  join <- list(complete=list(data_list=NULL,alpha=NULL,beta=NULL,code=NULL),
+  join <- list(complete=list(data_list=NULL,alpha=NULL,beta=NULL,code=NULL,alpha.code=NULL,beta.code=NULL, incode=NULL),
                labels=list(alpha=NULL,beta=NULL)
   )
   

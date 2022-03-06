@@ -19,10 +19,15 @@ initialise.gcode <- function(data_list,
                         )
   })
   
-  main.code <- list(code=lapply(unique(join$complete$code),function(X){NULL}),encode=lapply(unique(join$complete$code),function(X){NULL}))
+  main.code <- list(code=lapply(unique(join$complete$code),function(X){NULL}),encode=lapply(unique(join$complete$code),function(X){NULL}),incode=lapply(unique(join$complete$incode),function(X){NULL}))
   main.parameters <- list(alpha = lapply(unique(join$complete$alpha),function(X){NULL}), beta = lapply(unique(join$complete$beta),function(X){NULL}),
+                          alpha.code = lapply(unique(join$complete$alpha.code),function(X){NULL}), beta.code = lapply(unique(join$complete$beta.code),function(X){NULL}),
                           intercept = lapply(unique(1:length(join$complete$data_list)),function(X){NULL}))
-
+  
+  config.code <- config
+  config.code$i_dim <- config.code$k_dim
+  config.code$j_dim <- config.code$k_dim
+  
   for (i in 1:length(join$complete$data_list)){
     
     if (is.null(main.parameters$alpha[[join$complete$alpha[i]]])){
@@ -41,6 +46,29 @@ initialise.gcode <- function(data_list,
       }
     }
     
+    
+    
+    
+    if (is.null(main.parameters$alpha.code[[join$complete$alpha.code[i]]])){
+      if (!is.null(transfer$main.parameters$alpha.code[[join$complete$alpha.code[i]]])){
+        main.parameters$alpha.code[[join$complete$alpha.code[i]]] <- transfer$main.parameters$alpha.code[[join$complete$alpha.code[i]]]
+      } else {
+        main.parameters$alpha.code[[join$complete$alpha.code[i]]] <- t(as.matrix(initialise.parameters(x = diag(config$i_dim),config = config.code, param.type = "alpha")))
+      }
+    }
+    
+    if (is.null(main.parameters$beta.code[[join$complete$beta.code[i]]])){
+      if (!is.null(transfer$main.parameters$beta.code[[join$complete$beta.code[i]]])){
+        main.parameters$beta.code[[join$complete$beta.code[i]]] <- transfer$main.parameters$beta.code[[join$complete$beta.code[i]]]
+      } else {
+        main.parameters$beta.code[[join$complete$beta.code[i]]] <- t(as.matrix(initialise.parameters(x = diag(config$j_dim),config = config.code, param.type = "beta")))
+      }
+    }
+    
+    
+    
+    
+    
     if (is.null(main.code$encode[[join$complete$code[i]]])){
       if (!is.null(transfer$main.code$code[[join$complete$code[i]]])){
         main.code$encode[[join$complete$code[i]]] <- transfer$main.code$encode[[join$complete$code[i]]]
@@ -53,9 +81,19 @@ initialise.gcode <- function(data_list,
       if (!is.null(transfer$main.code$code[[join$complete$code[i]]])){
         main.code$code[[join$complete$code[i]]] <- transfer$main.code$code[[join$complete$code[i]]]
       } else {
-        main.code$code[[join$complete$code[i]]] <- as.matrix(MASS::ginv(main.parameters$alpha[[join$complete$alpha[i]]]%*%t(main.parameters$alpha[[join$complete$alpha[i]]]))%*%main.code$encode[[join$complete$data_list[i]]]%*%MASS::ginv(t(main.parameters$beta[[join$complete$beta[i]]])%*%main.parameters$beta[[join$complete$beta[i]]]))
+        main.code$code[[join$complete$code[i]]] <- as.matrix(MASS::ginv(main.parameters$alpha[[join$complete$alpha[i]]]%*%t(main.parameters$alpha[[join$complete$alpha[i]]]))%*%main.code$encode[[join$complete$code[i]]]%*%MASS::ginv(t(main.parameters$beta[[join$complete$beta[i]]])%*%main.parameters$beta[[join$complete$beta[i]]]))
       }
     }
+    
+    if (is.null(main.code$incode[[join$complete$incode[i]]])){
+      if (!is.null(transfer$main.code$code[[join$complete$code[i]]])){
+        main.code$incode[[join$complete$incode[i]]] <- transfer$main.code$incode[[join$complete$incode[i]]]
+      } else {
+        main.code$incode[[join$complete$incode[i]]] <- (t(main.parameters$alpha.code[[join$complete$alpha.code[i]]])%*%as.matrix(main.code$code[[join$complete$code[i]]])%*%t(main.parameters$beta.code[[join$complete$beta.code[i]]]))
+      }
+    }
+    
+  
     
     if (is.null(main.parameters$intercept[[join$complete$data_list[i]]])){
       if (!is.null(transfer$main.parameters$intercept[[join$complete$data_list[i]]])){
