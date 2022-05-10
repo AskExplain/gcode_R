@@ -7,6 +7,8 @@ dgcode <- function(data_list,
                    references = gcode::extract_references_framework(F)
 ){
   
+  names_data_list <- names(data_list)
+  
   dynamic_list_of_models <- list()
   
   combin <- cbind(rep(config$i_dim,length(config$j_dim)),rep(config$j_dim,length(config$i_dim)))
@@ -22,9 +24,17 @@ dgcode <- function(data_list,
     gcode.model <- gcode::gcode(data_list = data_list, config = config, join = join, transfer = transfer, recover = recover, references = references)
     dynamic_list_of_models <- c(dynamic_list_of_models,list(gcode.model))
     
-    data_list <- lapply(c(1:length(join$complete$data_list)),function(X){
-      data_list[[join$complete$data_list[X]]] - t(gcode.model$main.parameters$alpha[[join$complete$alpha[X]]])%*%gcode.model$main.code$code[[join$complete$code[X]]]%*%t(gcode.model$main.parameters$beta[[join$complete$beta[X]]]) - gcode.model$main.parameters$intercept[[join$complete$data_list[X]]]
+    data_list <- lapply(c(1:length(references$data_list)),function(X){
+      
+      if (references$data_list[X]==1){
+        return(data_list[[join$complete$data_list[X]]])
+      } else {
+        return(data_list[[join$complete$data_list[X]]] - t(gcode.model$main.parameters$alpha[[join$complete$alpha[X]]])%*%((gcode.model$main.parameters$alpha.code[[join$complete$alpha.code[X]]])%*%gcode.model$main.code$incode[[join$complete$incode[X]]]%*%(gcode.model$main.parameters$beta.code[[join$complete$beta.code[X]]]))%*%t(gcode.model$main.parameters$beta[[join$complete$beta[X]]]) - gcode.model$main.parameters$intercept[[join$complete$data_list[X]]])
+      }
+      
     })
+    
+    names(data_list) <- names_data_list 
     
   }
   

@@ -100,11 +100,8 @@ gcode <- function(data_list,
       }
     }
 
-
-    convergence.parameters$count = convergence.parameters$count + 1
-
     if (any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
-
+      
       recover_data <- recover_points(
         data_list,
         main.code = main.code,
@@ -114,14 +111,19 @@ gcode <- function(data_list,
         join = join,
         references = references
       )
-
+      
       recover <- recover_data$recover
       data_list <- recover_data$data_list
-
+      
     }
+    
+
+    convergence.parameters$count = convergence.parameters$count + 1
 
   }
 
+  
+  
   if (config$verbose){
     print("Learning has converged for gcode, beginning (if requested) dimension reduction")
   }
@@ -149,8 +151,8 @@ gcode <- function(data_list,
 
       x <- as.matrix(data_list[[join$complete$data_list[Y]]])
 
-      feature_x.dim_reduce.encode <- t(main.parameters$alpha[[join$complete$alpha[i]]]%*%x)
-      sample_x.dim_reduce.encode <- x%*%main.parameters$beta[[join$complete$beta[i]]]
+      feature_x.dim_reduce.encode <- t(main.parameters$alpha[[join$complete$alpha[Y]]]%*%x)
+      sample_x.dim_reduce.encode <- x%*%main.parameters$beta[[join$complete$beta[Y]]]
 
       return(list(
         feature_x.dim_reduce.encode = feature_x.dim_reduce.encode,
