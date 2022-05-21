@@ -7,9 +7,9 @@
 extract_references_framework(verbose = T)
 }
 \arguments{
-\item{alpha}{Joining the alpha parameters. A vector of integers, where identical integers indicate same the data axis to be joined.}
+\item{alpha_sample}{Joining the alpha_sample parameters. A vector of integers, where identical integers indicate same the data axis to be joined.}
 
-\item{beta}{Joining the beta parameters. A vector of integers, where identical integers indicate same the data axis to be joined.}
+\item{beta_sample}{Joining the beta_sample parameters. A vector of integers, where identical integers indicate same the data axis to be joined.}
 
 \item{code}{Joining the code parameters. A vector of integers, where identical integers indicate same the data axis to be joined.}
 }
