@@ -42,27 +42,7 @@ recover_points <- function(data_list,
               data_list[[join$complete$data_list[i]]] <- recover$predict.list[[join$complete$data_list[i]]] <- main.data
               
             }
-
-            if ("matrix.projection" %in% method){
-              
-              missing_points <- which(as.matrix(recover$design.list[[i]]==1),arr.ind = T)
-              row_with_missing_points <- unique(missing_points[,1])
-              column_with_missing_points <- unique(missing_points[,2])
-              
-              
-              main.data <- data_list[[join$complete$data_list[i]]] - main.parameters$intercept[[i]]
-              proj.data <- main.data%*%(main.parameters$beta[[join$complete$beta[i]]])%*%t(main.parameters$beta.code[[join$complete$beta.code[i]]])%*%MASS::ginv((main.parameters$beta.code[[join$complete$beta.code[i]]])%*%t(main.parameters$beta.code[[join$complete$beta.code[i]]]))
-              pred <- main.parameters$intercept[[i]] + proj.data %*% MASS::ginv( t( proj.data )%*% proj.data ) %*% t(proj.data) %*% main.data
-              
-              main.data[row_with_missing_points,column_with_missing_points]  <- pred[row_with_missing_points,column_with_missing_points]
-              data_list[[join$complete$data_list[i]]] <- recover$predict.list[[join$complete$data_list[i]]] <- main.data
-              
-              
-              
-            }
-
           }
-
         }
       }
       
