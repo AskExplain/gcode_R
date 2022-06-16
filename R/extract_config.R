@@ -20,6 +20,8 @@ extract_config <- function(verbose=T){
     max_iter=350,
     seed = 1,
     tol=1,
+    n.cores = 8,
+    learn_rate = 0.3,
     verbose = T
   )
 
