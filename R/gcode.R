@@ -29,8 +29,6 @@ gcode <- function(data_list,
 
   convergence.parameters <- list(count=0,score.vec=c())
 
-  recover$predict.list <- lapply(c(1:length(join$complete$data_list)),function(X){NULL})
-
   initialise.model <- initialise.gcode(data_list = data_list,
                                        config = config,
                                        transfer = transfer,
@@ -44,7 +42,7 @@ gcode <- function(data_list,
     print(paste("Beginning gcode learning with:    Sample dimension reduction (config$i_dim): ",config$i_dim, "    Feature dimension reduction (config$j_dim): ", config$j_dim, "    Latent invariant dimension (config$k_dim): ", config$k_dim, "    Tolerance Threshold: ", config$tol, "   Maximum number of iterations: ", config$max_iter, "   Verbose: ", config$verbose, sep=""))
   }
 
-
+  
   while (T){
 
     prev.code <- main.code
@@ -53,9 +51,11 @@ gcode <- function(data_list,
 
       internal.parameters <- list(alpha_sample=main.parameters$alpha_sample[[join$complete$alpha_sample[i]]],
                                   beta_sample=main.parameters$beta_sample[[join$complete$beta_sample[i]]],
+                                  alpha_signal=main.parameters$alpha_signal[[join$complete$alpha_signal[i]]],
+                                  beta_signal=main.parameters$beta_signal[[join$complete$beta_signal[i]]],
                                   intercept=main.parameters$intercept[[join$complete$data_list[i]]]
       )
-
+      
       internal.code <- list(encode=main.code$encode[[join$complete$code[i]]],
                             code=main.code$code[[join$complete$code[i]]])
       
@@ -67,11 +67,11 @@ gcode <- function(data_list,
       )
 
       main.parameters$alpha_sample[[join$complete$alpha_sample[i]]] <- return_update$main.parameters$alpha_sample
-      main.parameters$beta_sample[[join$complete$beta_sample[i]]] <- return_update$main.parameters$beta_sample
+      main.parameters$beta_sample[[join$complete$beta_sample[i]]] <- if(join$covariance[i]){t(return_update$main.parameters$alpha_sample)}else{return_update$main.parameters$beta_sample}
       
       main.parameters$alpha_signal[[join$complete$alpha_signal[i]]] <- return_update$main.parameters$alpha_signal
-      main.parameters$beta_signal[[join$complete$beta_signal[i]]] <- return_update$main.parameters$beta_signal
-      
+      main.parameters$beta_signal[[join$complete$beta_signal[i]]] <- if(join$covariance[i]){t(return_update$main.parameters$alpha_signal)}else{return_update$main.parameters$beta_signal}
+        
       main.code$code[[join$complete$code[i]]] <- return_update$main.code$code
       main.code$encode[[join$complete$code[i]]] <- return_update$main.code$encode
 
@@ -87,11 +87,17 @@ gcode <- function(data_list,
 
     # Check convergence
     convergence.parameters$score.vec <- c(convergence.parameters$score.vec, total.mse)
-    MSE <- tail(convergence.parameters$score.vec,1)
-    prev.MSE <- tail(convergence.parameters$score.vec,2)[1]
+    MSE <- mean(tail(convergence.parameters$score.vec,3))
+    prev.MSE <- mean(tail(convergence.parameters$score.vec,5)[1:3])
+    # convergence.parameters$rate.vec <- c(convergence.parameters$rate.vec, abs(prev.MSE - MSE))
+    # rate <- mean(tail(convergence.parameters$rate.vec,3))
+    # prev.rate <- mean(tail(convergence.parameters$rate.vec,5)[1:3])
 
-    if (convergence.parameters$count>=1){
-      print(paste("Iteration: ",convergence.parameters$count," with Tolerance of: ", abs(prev.MSE - MSE),sep=""))
+    if (convergence.parameters$count>=3){
+      if (config$verbose){
+        print(paste("Iteration: ",convergence.parameters$count," with Tolerance of: ", abs(prev.MSE - MSE),sep=""))
+      }
+      
       if ((convergence.parameters$count >= config$max_iter ) | abs(prev.MSE - MSE) < config$tol){
         break
       }
@@ -112,7 +118,11 @@ gcode <- function(data_list,
         references = references
       )
 
-      recover <- recover_data$recover
+      if (config$verbose){
+        print(c("Recovery operation round:    ", convergence.parameters$count))
+      }
+      
+      
       data_list <- recover_data$data_list
 
     }
@@ -122,6 +132,11 @@ gcode <- function(data_list,
   if (config$verbose){
     print("Learning has converged for gcode, beginning (if requested) dimension reduction")
   }
+  
+  
+  recover$predict.list <- lapply(c(1:length(data_list)),function(X){
+    Matrix::Matrix(recover$design.list[[X]]*data_list[[join$complete$data_list[X]]],sparse=T)
+  })
 
   return_list <- list(
 
@@ -179,15 +194,15 @@ update_set <- function(x,
                        config,
                        fix){
 
-  main.parameters$alpha_signal <- if(fix$alpha_signal){main.parameters$alpha_signal}else{t((x - main.parameters$intercept)%*%main.parameters$beta_sample%*%MASS::ginv(t(main.parameters$beta_sample)%*%main.parameters$beta_sample))}
-  main.parameters$beta_signal <- if(fix$beta_signal){main.parameters$beta_signal}else{t(MASS::ginv(main.parameters$alpha_sample%*%t(main.parameters$alpha_sample))%*%main.parameters$alpha_sample%*%(x - main.parameters$intercept))}
+  main.parameters$alpha_sample <- if(fix$alpha_sample){main.parameters$alpha_sample}else{t(t(main.parameters$alpha_signal)%*%t(main.code$code)%*%MASS::ginv(main.code$code%*%t(main.code$code)))}
+  main.parameters$beta_signal <- if(fix$beta_signal){main.parameters$beta_signal}else{as.matrix(t(MASS::ginv(main.parameters$alpha_sample%*%t(main.parameters$alpha_sample))%*%main.parameters$alpha_sample%*%(x - main.parameters$intercept)))}
+  
+  main.parameters$beta_sample <- if(fix$beta_sample){main.parameters$beta_sample}else{t(MASS::ginv(t(main.code$code)%*%main.code$code)%*%t(main.code$code)%*%t(main.parameters$beta_signal))}
+  main.parameters$alpha_signal <- if(fix$alpha_signal){main.parameters$alpha_signal}else{as.matrix(t((x - main.parameters$intercept)%*%main.parameters$beta_sample%*%MASS::ginv(t(main.parameters$beta_sample)%*%main.parameters$beta_sample)))}
   
   main.code$encode <- if(fix$encode){main.code$encode}else{(main.parameters$alpha_sample%*%(x - main.parameters$intercept)%*%(main.parameters$beta_sample))}
   main.code$code <- if(fix$code){main.code$code}else{MASS::ginv(main.parameters$alpha_sample%*%t(main.parameters$alpha_sample))%*%main.code$encode%*%MASS::ginv(t(main.parameters$beta_sample)%*%main.parameters$beta_sample)}
   
-  main.parameters$alpha_sample <- if(fix$alpha_sample){main.parameters$alpha_sample}else{t(t(main.parameters$alpha_signal)%*%t(main.code$code)%*%MASS::ginv(main.code$code%*%t(main.code$code)))}
-  main.parameters$beta_sample <- if(fix$beta_sample){main.parameters$beta_sample}else{t(MASS::ginv(t(main.code$code)%*%main.code$code)%*%t(main.code$code)%*%t(main.parameters$beta_signal))}
-
   main.parameters$intercept <- if(fix$intercept){main.parameters$intercept}else{colMeans(x - t(main.parameters$alpha_sample)%*%(main.code$code)%*%t(main.parameters$beta_sample))}
   
   return(list(main.parameters = main.parameters,
@@ -196,6 +211,7 @@ update_set <- function(x,
 
 }
 
+#' @export
 chunk <- function(x,n){
   if (n==1){
     list(x)

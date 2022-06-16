@@ -7,11 +7,30 @@ dgcode <- function(data_list,
                    references = gcode::extract_references_framework(F)
 ){
   
-  dynamic_list_of_models <- list()
-  
   combin <- cbind(rep(config$i_dim,length(config$j_dim)),rep(config$j_dim,length(config$i_dim)))
   
-  for (i in 1:dim(combin)[1]){
+  main_data_list <- data_list
+  main_join <- join
+  
+  config$i_dim <- combin[1,1]
+  config$j_dim <- combin[1,2]
+  config$verbose <- F
+  
+  dynamic_list_of_models <- list()
+  
+  gcode.model <- gcode::gcode(data_list = data_list, config = config, join = join, transfer = transfer, recover = recover, references = references)
+  dynamic_list_of_models <- c(dynamic_list_of_models,list(gcode.model))
+  
+  decoded <- c(lapply(c(1:length(main_join$complete$data_list)),function(X){
+    t(gcode.model$main.parameters$alpha_sample[[main_join$complete$alpha_sample[X]]])%*%gcode.model$main.code$code[[main_join$complete$code[X]]]%*%t(gcode.model$main.parameters$beta_sample[[main_join$complete$beta_sample[X]]]) + gcode.model$main.parameters$intercept[[main_join$complete$data_list[X]]]
+  }))
+  
+  data_list <- c(decoded,main_data_list)
+  
+  join$complete <- lapply(main_join$complete,function(X){c(X,X+max(X))})
+  join$complete$alpha_signal[1:length(join$complete$alpha_signal)] <- 1
+
+  for (i in 2:dim(combin)[1]){
     
     config$i_dim <- combin[i,1]
     config$j_dim <- combin[i,2]
@@ -22,10 +41,15 @@ dgcode <- function(data_list,
     gcode.model <- gcode::gcode(data_list = data_list, config = config, join = join, transfer = transfer, recover = recover, references = references)
     dynamic_list_of_models <- c(dynamic_list_of_models,list(gcode.model))
     
-    data_list <- lapply(c(1:length(join$complete$data_list)),function(X){
-      data_list[[join$complete$data_list[X]]] - t(gcode.model$main.parameters$alpha[[join$complete$alpha[X]]])%*%gcode.model$main.code$code[[join$complete$code[X]]]%*%t(gcode.model$main.parameters$beta[[join$complete$beta[X]]]) - gcode.model$main.parameters$intercept[[join$complete$data_list[X]]]
-    })
+    decoded <- c(lapply(c(1:length(main_join$complete$data_list)),function(X){
+      t(gcode.model$main.parameters$alpha_sample[[main_join$complete$alpha_sample[X]]])%*%gcode.model$main.code$code[[main_join$complete$code[X]]]%*%t(gcode.model$main.parameters$beta_sample[[main_join$complete$beta_sample[X]]]) + gcode.model$main.parameters$intercept[[main_join$complete$data_list[X]]]
+    }))
     
+    data_list <- c(decoded,main_data_list)
+    
+    join$complete <- lapply(main_join$complete,function(X){c(X,X+max(X))})
+    join$complete$alpha_signal[1:length(join$complete$alpha_signal)] <- 1
+
   }
   
   return(dynamic_list_of_models)

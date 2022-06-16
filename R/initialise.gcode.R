@@ -25,7 +25,6 @@ initialise.gcode <- function(data_list,
                           intercept = lapply(unique(join$complete$data_list),function(X){NULL}))
 
   
-  
   names(main.code$code) <- unique(join$complete$code)
   names(main.code$encode) <- unique(join$complete$code)
   
@@ -61,6 +60,10 @@ initialise.gcode <- function(data_list,
         main.parameters$beta_sample[[join$complete$beta_sample[i]]] <- as.matrix(initialise.parameters(x = data_list[[join$complete$data_list[i]]],config = config, param.type = "beta_sample"))
       }
     }
+    
+    
+    
+    
 
     if (is.null(main.code$encode[[join$complete$code[i]]])){
       if (!is.null(transfer$main.code$code[[join$complete$code[i]]])){
@@ -77,7 +80,8 @@ initialise.gcode <- function(data_list,
         main.code$code[[join$complete$code[i]]] <- as.matrix(MASS::ginv(main.parameters$alpha_sample[[join$complete$alpha_sample[i]]]%*%t(main.parameters$alpha_sample[[join$complete$alpha_sample[i]]]))%*%main.code$encode[[join$complete$code[i]]]%*%MASS::ginv(t(main.parameters$beta_sample[[join$complete$beta_sample[i]]])%*%main.parameters$beta_sample[[join$complete$beta_sample[i]]]))
       }
     }
-
+    
+    
     if (is.null(main.parameters$intercept[[join$complete$data_list[i]]])){
       if (!is.null(transfer$main.parameters$intercept[[join$complete$data_list[i]]])){
         main.parameters$intercept[[join$complete$data_list[i]]] <- transfer$main.parameters$intercept[[join$complete$data_list[i]]]
@@ -85,10 +89,31 @@ initialise.gcode <- function(data_list,
         main.parameters$intercept[[join$complete$data_list[i]]] <- colMeans(data_list[[join$complete$data_list[i]]] - t(main.parameters$alpha_sample[[join$complete$alpha_sample[i]]])%*%main.code$code[[join$complete$code[i]]]%*%t(main.parameters$beta_sample[[join$complete$beta_sample[i]]]))
       }
     }
-
+    
+    
+    
+    if (is.null(main.parameters$alpha_signal[[join$complete$alpha_signal[i]]])){
+      if (!is.null(transfer$main.parameters$alpha_signal[[join$complete$alpha_signal[i]]])){
+        main.parameters$alpha_signal[[join$complete$alpha_signal[i]]] <- transfer$main.parameters$alpha_signal[[join$complete$alpha_signal[i]]]
+      } else {
+        main.parameters$alpha_signal[[join$complete$alpha_signal[i]]] <- t(main.code$code[[join$complete$code[i]]])%*%main.parameters$alpha_sample[[join$complete$alpha_sample[i]]]
+      }
+    }
+    
+    if (is.null(main.parameters$beta_signal[[join$complete$beta_signal[i]]])){
+      if (!is.null(transfer$main.parameters$beta_signal[[join$complete$beta_signal[i]]])){
+        main.parameters$beta_signal[[join$complete$beta_signal[i]]] <- transfer$main.parameters$beta_signal[[join$complete$beta_signal[i]]]
+      } else {
+        main.parameters$beta_signal[[join$complete$beta_signal[i]]] <- main.parameters$beta_sample[[join$complete$beta_sample[i]]]%*%t(main.code$code[[join$complete$code[i]]])
+      }
+    }
+  
+    
   }
 
 
+  
+  
   return(
     list(
       main.parameters = main.parameters,
