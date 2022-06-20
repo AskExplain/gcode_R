@@ -197,15 +197,16 @@ update_set <- function(x,
                        seed_iter){
 
   set.seed(seed_iter)
-  chunk_list <- list(alpha=chunk(sample(c(1:config$i_dim)),round(config$i_dim/100,0)),
-                     beta=chunk(sample(c(1:config$j_dim)),round(config$j_dim/100,0)))
+  chunk_list <- list(alpha=chunk(sample(c(1:config$i_dim)),round(config$i_dim/config$batch_size,0)),
+                     beta=chunk(sample(c(1:config$j_dim)),round(config$j_dim/config$batch_size,0)))
   
   internal_parameters <- main.parameters
   internal_code <- main.code
   
-  param_combin <- cbind(rep(1:round(config$i_dim/100,0),each=round(config$j_dim/100,0)),rep(1:round(config$j_dim/100,0),times=round(config$i_dim/100,0)))
+  param_combin <- cbind(rep(1:round(config$i_dim/config$batch_size,0),each=round(config$j_dim/config$batch_size,0)),rep(1:round(config$j_dim/config$batch_size,0),times=round(config$i_dim/config$batch_size,0)))
+  # param_combin <- param_combin[sample(c(1:dim(param_combin)[1]),8),]
   
-  return_update <- pbmcapply::pbmclapply(c(1:dim(param_combin)[1]),function(i){
+  return_update <- parallel::mclapply(c(1:dim(param_combin)[1]),function(i){
     
     alpha_sample <- if(fix$alpha_sample){main.parameters$alpha_sample[chunk_list$alpha[[param_combin[i,1]]],]}else{(1-config$learn_rate)*internal_parameters$alpha_sample[chunk_list$alpha[[param_combin[i,1]]],]+config$learn_rate*t(t(internal_parameters$alpha_signal[chunk_list$beta[[param_combin[i,2]]],])%*%t(internal_code$code[chunk_list$alpha[[param_combin[i,1]]],chunk_list$beta[[param_combin[i,2]]]])%*%MASS::ginv(internal_code$code[chunk_list$alpha[[param_combin[i,1]]],chunk_list$beta[[param_combin[i,2]]]]%*%t(internal_code$code[chunk_list$alpha[[param_combin[i,1]]],chunk_list$beta[[param_combin[i,2]]]])))}
     beta_signal <- if(fix$beta_signal){main.parameters$beta_signal[,chunk_list$alpha[[param_combin[i,1]]]]}else{(1-config$learn_rate)*internal_parameters$beta_signal[,chunk_list$alpha[[param_combin[i,1]]]]+config$learn_rate*as.matrix(t(MASS::ginv(internal_parameters$alpha_sample[chunk_list$alpha[[param_combin[i,1]]],]%*%t(internal_parameters$alpha_sample[chunk_list$alpha[[param_combin[i,1]]],]))%*%internal_parameters$alpha_sample[chunk_list$alpha[[param_combin[i,1]]],]%*%(x - internal_parameters$intercept)))}
@@ -213,10 +214,10 @@ update_set <- function(x,
     beta_sample <- if(fix$beta_sample){main.parameters$beta_sample[,chunk_list$beta[[param_combin[i,2]]]]}else{(1-config$learn_rate)*internal_parameters$beta_sample[,chunk_list$beta[[param_combin[i,2]]]]+config$learn_rate*t(MASS::ginv(t(internal_code$code[chunk_list$alpha[[param_combin[i,1]]],chunk_list$beta[[param_combin[i,2]]]])%*%internal_code$code[chunk_list$alpha[[param_combin[i,1]]],chunk_list$beta[[param_combin[i,2]]]])%*%t(internal_code$code[chunk_list$alpha[[param_combin[i,1]]],chunk_list$beta[[param_combin[i,2]]]])%*%t(internal_parameters$beta_signal[,chunk_list$alpha[[param_combin[i,1]]]]))}
     alpha_signal <- if(fix$alpha_signal){main.parameters$alpha_signal[chunk_list$beta[[param_combin[i,2]]],]}else{(1-config$learn_rate)*internal_parameters$alpha_signal[chunk_list$beta[[param_combin[i,2]]],]+config$learn_rate*as.matrix(t((x - internal_parameters$intercept)%*%internal_parameters$beta_sample[,chunk_list$beta[[param_combin[i,2]]]]%*%MASS::ginv(t(internal_parameters$beta_sample[,chunk_list$beta[[param_combin[i,2]]]])%*%internal_parameters$beta_sample[,chunk_list$beta[[param_combin[i,2]]]])))}
     
-    encode <- if(fix$encode){main.code$encode}else{(1-config$learn_rate)*internal_code$encode[chunk_list$alpha[[param_combin[i,1]]],chunk_list$beta[[param_combin[i,2]]]]+config$learn_rate*(internal_parameters$alpha_sample[chunk_list$alpha[[param_combin[i,1]]],]%*%(x - internal_parameters$intercept)%*%(internal_parameters$beta_sample[,chunk_list$beta[[param_combin[i,2]]]]))}
+    encode <- if(fix$encode){main.code$encode}else{(internal_parameters$alpha_sample[chunk_list$alpha[[param_combin[i,1]]],]%*%(x - internal_parameters$intercept)%*%(internal_parameters$beta_sample[,chunk_list$beta[[param_combin[i,2]]]]))}
     code <- if(fix$code){main.code$code[chunk_list$alpha[[param_combin[i,1]]],chunk_list$beta[[param_combin[i,2]]]]}else{(1-config$learn_rate)*internal_code$code[chunk_list$alpha[[param_combin[i,1]]],chunk_list$beta[[param_combin[i,2]]]]+config$learn_rate*MASS::ginv(internal_parameters$alpha_sample[chunk_list$alpha[[param_combin[i,1]]],]%*%t(internal_parameters$alpha_sample[chunk_list$alpha[[param_combin[i,1]]],]))%*%internal_code$encode[chunk_list$alpha[[param_combin[i,1]]],chunk_list$beta[[param_combin[i,2]]]]%*%MASS::ginv(t(internal_parameters$beta_sample[,chunk_list$beta[[param_combin[i,2]]]])%*%internal_parameters$beta_sample[,chunk_list$beta[[param_combin[i,2]]]])}
     
-    intercept <- if(fix$intercept){main.parameters$intercept}else{colMeans(x - t(internal_parameters$alpha_sample)%*%(internal_code$code)%*%t(internal_parameters$beta_sample))}
+    intercept <- if(fix$intercept){main.parameters$intercept}else{colMeans(x - t(internal_parameters$alpha_sample[chunk_list$alpha[[param_combin[i,1]]],])%*%(internal_code$code[chunk_list$alpha[[param_combin[i,1]]],chunk_list$beta[[param_combin[i,2]]]])%*%t(internal_parameters$beta_sample[,chunk_list$beta[[param_combin[i,2]]]]))}
     
     return(list(main.parameters = list(alpha_sample=alpha_sample,
                                        beta_signal=beta_signal,
@@ -239,12 +240,11 @@ update_set <- function(x,
     main.parameters$beta_sample[,chunk_list$beta[[param_combin[i,2]]]] <- if(fix$beta_sample){main.parameters$beta_sample[,chunk_list$beta[[param_combin[i,2]]]]}else{return_update[[i]]$main.parameters$beta_sample}
     main.parameters$alpha_signal[chunk_list$beta[[param_combin[i,2]]],] <- if(fix$alpha_signal){main.parameters$alpha_signal[chunk_list$beta[[param_combin[i,2]]],]}else{return_update[[i]]$main.parameters$alpha_signal}
     
-    main.code$encode[chunk_list$alpha[[param_combin[i,1]]],chunk_list$beta[[param_combin[i,2]]]] <- if(fix$encode){main.code$encode}else{return_update[[i]]$main.code$encode}
+    main.code$encode[chunk_list$alpha[[param_combin[i,1]]],chunk_list$beta[[param_combin[i,2]]]] <- if(fix$code){main.code$encode[chunk_list$alpha[[param_combin[i,1]]],chunk_list$beta[[param_combin[i,2]]]]}else{return_update[[i]]$main.code$encode}
     main.code$code[chunk_list$alpha[[param_combin[i,1]]],chunk_list$beta[[param_combin[i,2]]]] <- if(fix$code){main.code$code[chunk_list$alpha[[param_combin[i,1]]],chunk_list$beta[[param_combin[i,2]]]]}else{return_update[[i]]$main.code$code}
     
-    main.parameters$intercept <- if(fix$intercept){main.parameters$intercept}else{return_update[[i]]$main.parameters$intercept}
-    
   }
+  
   
   
   return(list(main.parameters = main.parameters,

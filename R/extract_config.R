@@ -22,6 +22,7 @@ extract_config <- function(verbose=T){
     tol=1,
     n.cores = 8,
     learn_rate = 0.3,
+    batch_size = 100,
     verbose = T
   )
 

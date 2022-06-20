@@ -56,6 +56,8 @@ initialise.gcode <- function(data_list,
     if (is.null(main.parameters$beta_sample[[join$complete$beta_sample[i]]])){
       if (!is.null(transfer$main.parameters$beta_sample[[join$complete$beta_sample[i]]])){
         main.parameters$beta_sample[[join$complete$beta_sample[i]]] <- transfer$main.parameters$beta_sample[[join$complete$beta_sample[i]]]
+      } else if (join$covariance[[join$complete$data_list[i]]]) {
+        main.parameters$beta_sample[[join$complete$beta_sample[i]]] <- t(main.parameters$alpha_sample[[join$complete$alpha_sample[i]]])
       } else {
         main.parameters$beta_sample[[join$complete$beta_sample[i]]] <- as.matrix(initialise.parameters(x = data_list[[join$complete$data_list[i]]],config = config, param.type = "beta_sample"))
       }
@@ -103,6 +105,8 @@ initialise.gcode <- function(data_list,
     if (is.null(main.parameters$beta_signal[[join$complete$beta_signal[i]]])){
       if (!is.null(transfer$main.parameters$beta_signal[[join$complete$beta_signal[i]]])){
         main.parameters$beta_signal[[join$complete$beta_signal[i]]] <- transfer$main.parameters$beta_signal[[join$complete$beta_signal[i]]]
+      } else if (join$covariance[[join$complete$data_list[i]]]) {
+        main.parameters$beta_signal[[join$complete$beta_signal[i]]] <- t(main.parameters$alpha_signal[[join$complete$alpha_signal[i]]])
       } else {
         main.parameters$beta_signal[[join$complete$beta_signal[i]]] <- main.parameters$beta_sample[[join$complete$beta_sample[i]]]%*%t(main.code$code[[join$complete$code[i]]])
       }
@@ -136,6 +140,8 @@ initialise.parameters <- function(x,config,param.type){
       (irlba::irlba(as.matrix(x), nv = config$j_dim, maxit = 1)$v)
     } else if (config$init[[2]]=="rsvd") {
       (rsvd::rsvd(as.matrix(x), nv = config$j_dim)$v)
+    } else if (config$init[[2]]=="resample") {
+      array(sample(c(x),dim(x)[2]*config$j_dim),dim=c(dim(x)[2],config$j_dim))
     }
   }
 
@@ -148,6 +154,8 @@ initialise.parameters <- function(x,config,param.type){
       t(irlba::irlba(as.matrix(x), nu = config$i_dim, maxit = 1)$u)
     } else if (config$init[[1]]=="rsvd") {
       t(rsvd::rsvd(as.matrix(x), nu = config$i_dim)$u)
+    } else if (config$init[[1]]=="resample") {
+      array(sample(c(x),dim(x)[1]*config$i_dim),dim=c(config$i_dim,dim(x)[1]))
     }
   }
 
