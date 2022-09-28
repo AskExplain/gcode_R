@@ -1,6 +1,6 @@
-# Linear Encoding-Decoding
+# Generative Encoding (gcode)
 
-A linear encoding method - ideas stemming from Singular Value Decomposition, geometric Procrustes, the statistical Canonical Correlation Analysis, and the neural network Autoencoder.
+A linear encoding-decoding method - ideas stemming from Singular Value Decomposition, geometric Procrustes, the statistical Canonical Correlation Analysis, and the neural network Autoencoder.
 
 
 biorxiv
