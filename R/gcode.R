@@ -29,8 +29,6 @@ gcode <- function(data_list,
 
   convergence.parameters <- list(count=0,score.vec=c())
 
-  recover$predict.list <- lapply(c(1:length(join$complete$data_list)),function(X){NULL})
-
   initialise.model <- initialise.gcode(data_list = data_list,
                                        config = config,
                                        transfer = transfer,
@@ -44,18 +42,52 @@ gcode <- function(data_list,
     print(paste("Beginning gcode learning with:    Sample dimension reduction (config$i_dim): ",config$i_dim, "    Feature dimension reduction (config$j_dim): ", config$j_dim, "    Latent invariant dimension (config$k_dim): ", config$k_dim, "    Tolerance Threshold: ", config$tol, "   Maximum number of iterations: ", config$max_iter, "   Verbose: ", config$verbose, sep=""))
   }
 
-
+  
   while (T){
 
     prev.code <- main.code
+    
+    for (i in 1:length(join$complete$data_list)){
+      
+      
+      internal.parameters <- list(alpha_sample=main.parameters$alpha_sample[[join$complete$alpha_sample[i]]],
+                                  beta_sample=main.parameters$beta_sample[[join$complete$beta_sample[i]]]
+      )
+      
+      internal.code <- list(encode=main.code$encode[[join$complete$code[i]]],
+                            code=main.code$code[[join$complete$code[i]]])
+      
+      reference.parameters <- list(alpha_sample=main.parameters$alpha_sample[[join$complete$alpha_sample[references$data_list]]],
+                                   beta_sample=main.parameters$beta_sample[[join$complete$beta_sample[references$data_list]]]
+      )
+      
+      reference.code <- list(encode=main.code$encode[[join$complete$code[references$data_list]]],
+                             code=main.code$code[[join$complete$code[references$data_list]]])
+      
+      return_update <- update_regression(y = data_list[[references$data_list]],
+                                         x = as.matrix(data_list[[join$complete$data_list[i]]]),
+                                         main.parameters = internal.parameters,
+                                         main.code = internal.code,
+                                         reference.parameters = reference.parameters,
+                                         reference.code = reference.code,
+                                         config = config,
+                                         fix = transfer$fix,
+                                         seed_iter = convergence.parameters$count
+      )
+      
+      main.parameters$alpha_sample[[join$complete$alpha_sample[i]]] <- return_update$main.parameters$alpha_sample
+      main.parameters$beta_sample[[join$complete$beta_sample[i]]] <- if(join$covariance[i]){t(return_update$main.parameters$alpha_sample)}else{return_update$main.parameters$beta_sample}
+      
+      
+    }
+    
 
     for (i in 1:length(join$complete$data_list)){
 
       internal.parameters <- list(alpha_sample=main.parameters$alpha_sample[[join$complete$alpha_sample[i]]],
-                                  beta_sample=main.parameters$beta_sample[[join$complete$beta_sample[i]]],
-                                  intercept=main.parameters$intercept[[join$complete$data_list[i]]]
-      )
-
+                                  beta_sample=main.parameters$beta_sample[[join$complete$beta_sample[i]]]
+                                  )
+      
       internal.code <- list(encode=main.code$encode[[join$complete$code[i]]],
                             code=main.code$code[[join$complete$code[i]]])
       
@@ -63,21 +95,21 @@ gcode <- function(data_list,
                                   main.parameters = internal.parameters,
                                   main.code = internal.code,
                                   config = config,
-                                  fix = transfer$fix
+                                  fix = transfer$fix,
+                                  seed_iter = convergence.parameters$count
       )
-
-      main.parameters$alpha_sample[[join$complete$alpha_sample[i]]] <- return_update$main.parameters$alpha_sample
-      main.parameters$beta_sample[[join$complete$beta_sample[i]]] <- return_update$main.parameters$beta_sample
       
-      main.parameters$alpha_signal[[join$complete$alpha_signal[i]]] <- return_update$main.parameters$alpha_signal
-      main.parameters$beta_signal[[join$complete$beta_signal[i]]] <- return_update$main.parameters$beta_signal
+      main.parameters$alpha_sample[[join$complete$alpha_sample[i]]] <- return_update$main.parameters$alpha_sample
+      main.parameters$beta_sample[[join$complete$beta_sample[i]]] <- if(join$covariance[i]){t(return_update$main.parameters$alpha_sample)}else{return_update$main.parameters$beta_sample}
       
       main.code$code[[join$complete$code[i]]] <- return_update$main.code$code
       main.code$encode[[join$complete$code[i]]] <- return_update$main.code$encode
-
-      main.parameters$intercept[[join$complete$data_list[i]]] <- return_update$main.parameters$intercept
-
+      
     }
+    
+    
+    
+    
 
     total.mse <- matrix.residuals <- Reduce("+",lapply(unique(join$complete$code),function(X){
 
@@ -87,11 +119,14 @@ gcode <- function(data_list,
 
     # Check convergence
     convergence.parameters$score.vec <- c(convergence.parameters$score.vec, total.mse)
-    MSE <- tail(convergence.parameters$score.vec,1)
-    prev.MSE <- tail(convergence.parameters$score.vec,2)[1]
-
+    MSE <- mean(tail(convergence.parameters$score.vec,1))
+    prev.MSE <- mean(tail(convergence.parameters$score.vec,2)[1])
+    
     if (convergence.parameters$count>=1){
-      print(paste("Iteration: ",convergence.parameters$count," with Tolerance of: ", abs(prev.MSE - MSE),sep=""))
+      if (config$verbose){
+        print(paste("Iteration: ",convergence.parameters$count," with Tolerance of: ", abs(prev.MSE - MSE),sep=""))
+      }
+      
       if ((convergence.parameters$count >= config$max_iter ) | abs(prev.MSE - MSE) < config$tol){
         break
       }
@@ -101,7 +136,7 @@ gcode <- function(data_list,
     convergence.parameters$count = convergence.parameters$count + 1
 
     if (any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
-
+      
       recover_data <- recover_points(
         data_list,
         main.code = main.code,
@@ -109,19 +144,30 @@ gcode <- function(data_list,
         config = config,
         recover = recover,
         join = join,
-        references = references
+        references = references,
+        iter = convergence.parameters$count
       )
-
-      recover <- recover_data$recover
-      data_list <- recover_data$data_list
-
+      
+      if (config$verbose){
+        print(c("Recovery operation round:    ", convergence.parameters$count))
+      }
+      
+      
+      recover$predict.list <- data_list <- recover_data$data_list
+      
     }
+    
 
   }
 
   if (config$verbose){
     print("Learning has converged for gcode, beginning (if requested) dimension reduction")
   }
+  
+  
+  recover$predict.list <- lapply(c(1:length(data_list)),function(X){
+    Matrix::Matrix(recover$design.list[[X]]*data_list[[join$complete$data_list[X]]],sparse=T)
+  })
 
   return_list <- list(
 
@@ -177,25 +223,113 @@ update_set <- function(x,
                        main.parameters,
                        main.code,
                        config,
-                       fix){
+                       fix,
+                       seed_iter){
 
-  main.parameters$alpha_signal <- if(fix$alpha_signal){main.parameters$alpha_signal}else{t((x - main.parameters$intercept)%*%main.parameters$beta_sample%*%MASS::ginv(t(main.parameters$beta_sample)%*%main.parameters$beta_sample))}
-  main.parameters$beta_signal <- if(fix$beta_signal){main.parameters$beta_signal}else{t(MASS::ginv(main.parameters$alpha_sample%*%t(main.parameters$alpha_sample))%*%main.parameters$alpha_sample%*%(x - main.parameters$intercept))}
+  set.seed(seed_iter)
+  chunk_list <- list(alpha=chunk(sample(c(1:config$i_dim)),round(config$i_dim/config$batch_size,0)),
+                     beta=chunk(sample(c(1:config$j_dim)),round(config$j_dim/config$batch_size,0)))
   
-  main.code$encode <- if(fix$encode){main.code$encode}else{(main.parameters$alpha_sample%*%(x - main.parameters$intercept)%*%(main.parameters$beta_sample))}
-  main.code$code <- if(fix$code){main.code$code}else{MASS::ginv(main.parameters$alpha_sample%*%t(main.parameters$alpha_sample))%*%main.code$encode%*%MASS::ginv(t(main.parameters$beta_sample)%*%main.parameters$beta_sample)}
+  internal_parameters <- main.parameters
+  internal_code <- main.code
   
-  main.parameters$alpha_sample <- if(fix$alpha_sample){main.parameters$alpha_sample}else{t(t(main.parameters$alpha_signal)%*%t(main.code$code)%*%MASS::ginv(main.code$code%*%t(main.code$code)))}
-  main.parameters$beta_sample <- if(fix$beta_sample){main.parameters$beta_sample}else{t(MASS::ginv(t(main.code$code)%*%main.code$code)%*%t(main.code$code)%*%t(main.parameters$beta_signal))}
+  param_combin <- cbind(rep(1:round(config$i_dim/config$batch_size,0),each=round(config$j_dim/config$batch_size,0)),rep(1:round(config$j_dim/config$batch_size,0),times=round(config$i_dim/config$batch_size,0)))
 
-  main.parameters$intercept <- if(fix$intercept){main.parameters$intercept}else{colMeans(x - t(main.parameters$alpha_sample)%*%(main.code$code)%*%t(main.parameters$beta_sample))}
+  return_update <- parallel::mclapply(c(1:dim(param_combin)[1]),function(i){
+    
+    beta_sample <- if(fix$beta_sample){main.parameters$beta_sample[,chunk_list$beta[[param_combin[i,2]]]]}else{
+      (1-config$learn_rate)*
+        internal_parameters$beta_sample[,chunk_list$beta[[param_combin[i,2]]],drop=F]+
+        config$learn_rate*
+        array(t(MASS::ginv(t((internal_code$code[chunk_list$alpha[[param_combin[i,1]]],chunk_list$beta[[param_combin[i,2]]],drop=F]))%*%
+                                 ((internal_code$code[chunk_list$alpha[[param_combin[i,1]]],chunk_list$beta[[param_combin[i,2]]],drop=F])))%*%
+                      t(internal_code$code[chunk_list$alpha[[param_combin[i,1]]],chunk_list$beta[[param_combin[i,2]]],drop=F])%*%
+                      MASS::ginv(internal_parameters$alpha_sample[chunk_list$alpha[[param_combin[i,1]]],,drop=F]%*%
+                                   t(internal_parameters$alpha_sample[chunk_list$alpha[[param_combin[i,1]]],,drop=F]))%*%
+                      internal_parameters$alpha_sample[chunk_list$alpha[[param_combin[i,1]]],,drop=F]%*%
+                      (x)),dim=c(dim(x)[2],length(chunk_list$beta[[param_combin[i,2]]])))}
+    alpha_sample <- if(fix$alpha_sample){main.parameters$alpha_sample[chunk_list$alpha[[param_combin[i,1]]],]}else{
+      (1-config$learn_rate)*
+        internal_parameters$alpha_sample[chunk_list$alpha[[param_combin[i,1]]],]+
+        config$learn_rate*
+        array(t((x)%*%
+                      internal_parameters$beta_sample[,chunk_list$beta[[param_combin[i,2]]],drop=F]%*%
+                      MASS::ginv(t(internal_parameters$beta_sample[,chunk_list$beta[[param_combin[i,2]]],drop=F])%*%
+                                   internal_parameters$beta_sample[,chunk_list$beta[[param_combin[i,2]]],drop=F])%*%
+                      t(internal_code$code[chunk_list$alpha[[param_combin[i,1]]],chunk_list$beta[[param_combin[i,2]]],drop=F])%*%
+                      MASS::ginv((internal_code$code[chunk_list$alpha[[param_combin[i,1]]],chunk_list$beta[[param_combin[i,2]]]])%*%
+                                   t(internal_code$code[chunk_list$alpha[[param_combin[i,1]]],chunk_list$beta[[param_combin[i,2]]]]))),dim = c(length(chunk_list$alpha[[param_combin[i,1]]]),dim(x)[1]))}
+    
+    
+    encode <- if(fix$encode){main.code$encode}else{(internal_parameters$alpha_sample[chunk_list$alpha[[param_combin[i,1]]],]%*%(x)%*%(internal_parameters$beta_sample[,chunk_list$beta[[param_combin[i,2]]]]))}
+
+    code <- if(fix$code){main.code$code[chunk_list$alpha[[param_combin[i,1]]],chunk_list$beta[[param_combin[i,2]]]]}else{
+      (1-config$learn_rate)*
+        internal_code$code[chunk_list$alpha[[param_combin[i,1]]],chunk_list$beta[[param_combin[i,2]]]]+
+        config$learn_rate*
+        MASS::ginv(internal_parameters$alpha_sample[chunk_list$alpha[[param_combin[i,1]]],,drop=F]%*%
+                     t(internal_parameters$alpha_sample[chunk_list$alpha[[param_combin[i,1]]],,drop=F]))%*%
+        internal_code$encode[chunk_list$alpha[[param_combin[i,1]]],chunk_list$beta[[param_combin[i,2]]]]%*%
+        MASS::ginv(t(internal_parameters$beta_sample[,chunk_list$beta[[param_combin[i,2]]],drop=F])%*%
+                     internal_parameters$beta_sample[,chunk_list$beta[[param_combin[i,2]]],drop=F])}
+
+    return(list(main.parameters = list(alpha_sample=alpha_sample,
+                                       beta_sample=beta_sample),
+                main.code = list(
+                  encode=encode,
+                  code=code
+                )
+    ))
+    
+  },mc.cores = config$n.cores)
   
+  for (i in c(1:dim(param_combin)[1])){
+    
+    main.parameters$alpha_sample[chunk_list$alpha[[param_combin[i,1]]],] <- if(fix$alpha_sample){main.parameters$alpha_sample[chunk_list$alpha[[param_combin[i,1]]],]}else{soft_threshold(return_update[[i]]$main.parameters$alpha_sample,config = config)}
+    main.parameters$beta_sample[,chunk_list$beta[[param_combin[i,2]]]] <- if(fix$beta_sample){main.parameters$beta_sample[,chunk_list$beta[[param_combin[i,2]]]]}else{soft_threshold(return_update[[i]]$main.parameters$beta_sample,config = config)}
+
+    main.code$encode[chunk_list$alpha[[param_combin[i,1]]],chunk_list$beta[[param_combin[i,2]]]] <- if(fix$code){main.code$encode[chunk_list$alpha[[param_combin[i,1]]],chunk_list$beta[[param_combin[i,2]]]]}else{return_update[[i]]$main.code$encode}
+    main.code$code[chunk_list$alpha[[param_combin[i,1]]],chunk_list$beta[[param_combin[i,2]]]] <- if(fix$code){main.code$code[chunk_list$alpha[[param_combin[i,1]]],chunk_list$beta[[param_combin[i,2]]]]}else{return_update[[i]]$main.code$code}
+    
+  }
+
   return(list(main.parameters = main.parameters,
               main.code = main.code
   ))
 
 }
 
+
+
+
+
+
+update_regression <- function(y,
+                              x,
+                              main.parameters,
+                              main.code,
+                              reference.parameters,
+                              reference.code,
+                              config,
+                              fix,
+                              seed_iter){
+  
+  for (i in 1:3){
+  reference.encode <- (main.parameters$alpha_sample)%*%y%*%(reference.parameters$beta_sample)
+  
+  main.encode <- (main.parameters$alpha_sample)%*%x%*%(main.parameters$beta_sample)
+  D <- MASS::ginv(t(main.encode)%*%(main.encode))%*%t(main.encode)%*%reference.encode
+  main.parameters$beta_sample <- main.parameters$beta_sample%*%D
+  
+  main.encode <- (main.parameters$alpha_sample)%*%x%*%(main.parameters$beta_sample)
+  H <- reference.encode%*%t(main.encode)%*%MASS::ginv(main.encode%*%t(main.encode))
+  main.parameters$alpha_sample <- H%*%main.parameters$alpha_sample
+  }
+  return(list(main.parameters = main.parameters))
+
+}
+
+#' @export
 chunk <- function(x,n){
   if (n==1){
     list(x)
@@ -203,4 +337,22 @@ chunk <- function(x,n){
   else{
     split(x, cut(seq_along(x), n, labels = FALSE))
   }
+}
+
+
+
+
+#' @export
+soft_threshold <- function(param,config){
+  
+  alpha <- config$regularise$a
+  lambda <- config$regularise$l
+  
+  gamma <- lambda*alpha
+  
+  param <- (((param - gamma)*(param>0)+
+               (param + gamma)*(param<0))*(abs(param)>gamma))
+  
+  return(param / (1 + lambda*(1 - alpha)))
+  
 }

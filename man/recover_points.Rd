@@ -11,7 +11,8 @@ recover_points(
   config,
   join,
   recover,
-  references
+  references,
+  iter
 )
 }
 \arguments{

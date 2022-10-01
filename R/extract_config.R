@@ -14,13 +14,16 @@ extract_config <- function(verbose=T){
   config <- list(
     init=list(alpha_sample="irlba",beta_sample="irlba"),
     transform=list(log=F,center=F,norm=F),
-    regularise=list(a=0,l=0),
+    regularise=list(a=0,l=0.5),
     dimension_reduction=FALSE,
     i_dim = 30,
     j_dim = 30,
     max_iter=350,
     seed = 1,
     tol=1,
+    n.cores = 8,
+    learn_rate = 0.3,
+    batch_size = 100,
     verbose = T
   )
 
@@ -68,11 +71,7 @@ extract_transfer_framework <- function(verbose=T){
 #' @export
 extract_recovery_framework <- function(verbose=T){
   recover <- list(
-    task = c("regression"),
-    method = c("matrix.projection"),
-    link_function = c("identity","identity"),
-    design.list = NULL,
-    labels = NULL
+    design.list = NULL
   )
   
   if (verbose == T){
