@@ -315,7 +315,7 @@ update_regression <- function(y,
                               seed_iter){
   
   for (i in 1:3){
-  reference.encode <- (main.parameters$alpha_sample)%*%y%*%(reference.parameters$beta_sample)
+  reference.encode <- (reference.parameters$alpha_sample)%*%y%*%(reference.parameters$beta_sample)
   
   main.encode <- (main.parameters$alpha_sample)%*%x%*%(main.parameters$beta_sample)
   D <- MASS::ginv(t(main.encode)%*%(main.encode))%*%t(main.encode)%*%reference.encode
