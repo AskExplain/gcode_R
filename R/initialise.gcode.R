@@ -20,9 +20,9 @@ initialise.gcode <- function(data_list,
   })
 
   main.code <- list(code=lapply(unique(join$complete$code),function(X){NULL}),encode=lapply(unique(join$complete$code),function(X){NULL}))
+  main.intercept <- list(rintercept=lapply(unique(join$complete$rintercept),function(X){NULL}),cintercept=lapply(unique(join$complete$cintercept),function(X){NULL}))
   main.parameters <- list(alpha_sample = lapply(unique(join$complete$alpha_sample),function(X){NULL}), beta_sample = lapply(unique(join$complete$beta_sample),function(X){NULL}),
-                          alpha_signal = lapply(unique(join$complete$alpha_signal),function(X){NULL}), beta_signal = lapply(unique(join$complete$beta_signal),function(X){NULL}),
-                          intercept = lapply(unique(join$complete$data_list),function(X){NULL}))
+                          alpha_signal = lapply(unique(join$complete$alpha_signal),function(X){NULL}), beta_signal = lapply(unique(join$complete$beta_signal),function(X){NULL}))
 
   
   
@@ -35,8 +35,9 @@ initialise.gcode <- function(data_list,
   names(main.parameters$alpha_signal) <- unique(join$complete$alpha_signal)
   names(main.parameters$beta_signal) <- unique(join$complete$beta_signal)
   
-  names(main.parameters$intercept) <- unique(join$complete$data_list)
-  
+  names(main.intercept$rintercept) <- unique(join$complete$rintercept)
+  names(main.intercept$cintercept) <- unique(join$complete$cintercept)
+    
   
   
   
@@ -62,11 +63,11 @@ initialise.gcode <- function(data_list,
       }
     }
 
-    if (is.null(main.code$encode[[join$complete$code[i]]])){
-      if (!is.null(transfer$main.code$encode[[join$complete$code[i]]])){
-        main.code$encode[[join$complete$code[i]]] <- transfer$main.code$encode[[join$complete$code[i]]]
+    if (is.null(main.code$encode[[join$complete$encode[i]]])){
+      if (!is.null(transfer$main.code$encode[[join$complete$encode[i]]])){
+        main.code$encode[[join$complete$encode[i]]] <- transfer$main.code$encode[[join$complete$encode[i]]]
       } else {
-        main.code$encode[[join$complete$code[i]]] <- main.parameters$alpha_sample[[join$complete$alpha_sample[i]]]%*%as.matrix(data_list[[join$complete$data_list[i]]])%*%main.parameters$beta_sample[[join$complete$beta_sample[i]]]
+        main.code$encode[[join$complete$encode[i]]] <- main.parameters$alpha_sample[[join$complete$alpha_sample[i]]]%*%as.matrix(data_list[[join$complete$data_list[i]]])%*%main.parameters$beta_sample[[join$complete$beta_sample[i]]]
       }
     }
 
@@ -74,17 +75,26 @@ initialise.gcode <- function(data_list,
       if (!is.null(transfer$main.code$code[[join$complete$code[i]]])){
         main.code$code[[join$complete$code[i]]] <- transfer$main.code$code[[join$complete$code[i]]]
       } else {
-        main.code$code[[join$complete$code[i]]] <- as.matrix(MASS::ginv(main.parameters$alpha_sample[[join$complete$alpha_sample[i]]]%*%t(main.parameters$alpha_sample[[join$complete$alpha_sample[i]]]))%*%main.code$encode[[join$complete$code[i]]]%*%MASS::ginv(t(main.parameters$beta_sample[[join$complete$beta_sample[i]]])%*%main.parameters$beta_sample[[join$complete$beta_sample[i]]]))
+        main.code$code[[join$complete$code[i]]] <- as.matrix(MASS::ginv(main.parameters$alpha_sample[[join$complete$alpha_sample[i]]]%*%t(main.parameters$alpha_sample[[join$complete$alpha_sample[i]]]))%*%main.code$encode[[join$complete$encode[i]]]%*%MASS::ginv(t(main.parameters$beta_sample[[join$complete$beta_sample[i]]])%*%main.parameters$beta_sample[[join$complete$beta_sample[i]]]))
       }
     }
 
-    if (is.null(main.parameters$intercept[[join$complete$data_list[i]]])){
-      if (!is.null(transfer$main.parameters$intercept[[join$complete$data_list[i]]])){
-        main.parameters$intercept[[join$complete$data_list[i]]] <- transfer$main.parameters$intercept[[join$complete$data_list[i]]]
+    if (is.null(main.intercept$cintercept[[join$complete$cintercept[i]]])){
+      if (!is.null(transfer$main.intercept$cintercept[[join$complete$cintercept[i]]])){
+        main.intercept$cintercept[[join$complete$cintercept[i]]] <- transfer$main.intercept$cintercept[[join$complete$cintercept[i]]]
       } else {
-        main.parameters$intercept[[join$complete$data_list[i]]] <- colMeans(data_list[[join$complete$data_list[i]]] - t(main.parameters$alpha_sample[[join$complete$alpha_sample[i]]])%*%main.code$code[[join$complete$code[i]]]%*%t(main.parameters$beta_sample[[join$complete$beta_sample[i]]]))
+        main.intercept$cintercept[[join$complete$cintercept[i]]] <- colMeans(t(main.intercept$alpha_sample[[join$complete$alpha_sample[i]]])%*%main.code$code[[join$complete$code[i]]]%*%t(main.intercept$beta_sample[[join$complete$beta_sample[i]]]))
       }
     }
+    
+    if (is.null(main.intercept$rintercept[[join$complete$rintercept[i]]])){
+      if (!is.null(transfer$main.intercept$rintercept[[join$complete$rintercept[i]]])){
+        main.intercept$rintercept[[join$complete$rintercept[i]]] <- transfer$main.intercept$rintercept[[join$complete$rintercept[i]]]
+      } else {
+        main.intercept$rintercept[[join$complete$rintercept[i]]] <- rowMeans(t(main.intercept$alpha_sample[[join$complete$alpha_sample[i]]])%*%main.code$code[[join$complete$code[i]]]%*%t(main.intercept$beta_sample[[join$complete$beta_sample[i]]]))
+      }
+    }
+    
 
   }
 
@@ -92,7 +102,8 @@ initialise.gcode <- function(data_list,
   return(
     list(
       main.parameters = main.parameters,
-      main.code = main.code
+      main.code = main.code,
+      main.intercept = main.intercept
       )
   )
 
