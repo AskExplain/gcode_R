@@ -38,6 +38,7 @@ gcode <- function(data_list,
 
   main.parameters <- initialise.model$main.parameters
   main.code <- initialise.model$main.code
+  main.intercept <- initialise.model$main.intercept
 
   
   if (config$verbose){
@@ -52,16 +53,19 @@ gcode <- function(data_list,
     for (i in 1:length(join$complete$data_list)){
 
       internal.parameters <- list(alpha_sample=main.parameters$alpha_sample[[join$complete$alpha_sample[i]]],
-                                  beta_sample=main.parameters$beta_sample[[join$complete$beta_sample[i]]],
-                                  intercept=main.parameters$intercept[[join$complete$data_list[i]]]
+                                  beta_sample=main.parameters$beta_sample[[join$complete$beta_sample[i]]]
       )
 
       internal.code <- list(encode=main.code$encode[[join$complete$code[i]]],
                             code=main.code$code[[join$complete$code[i]]])
       
+      internal.intercept <- list( rintercept=main.intercept$rintercept[[join$complete$rintercept[i]]],
+                                  cintercept=main.intercept$cintercept[[join$complete$cintercept[i]]] )
+      
       return_update <- update_set(x = as.matrix(data_list[[join$complete$data_list[i]]]),
                                   main.parameters = internal.parameters,
                                   main.code = internal.code,
+                                  main.intercept = internal.intercept,
                                   config = config,
                                   fix = transfer$fix
       )
@@ -75,8 +79,9 @@ gcode <- function(data_list,
       main.code$code[[join$complete$code[i]]] <- return_update$main.code$code
       main.code$encode[[join$complete$code[i]]] <- return_update$main.code$encode
 
-      main.parameters$intercept[[join$complete$data_list[i]]] <- return_update$main.parameters$intercept
-
+      main.intercept$rintercept[[join$complete$rintercept[i]]] <- return_update$main.intercept$rintercept
+      main.intercept$cintercept[[join$complete$cintercept[i]]] <- return_update$main.intercept$cintercept
+      
     }
 
     total.mse <- matrix.residuals <- Reduce("+",lapply(unique(join$complete$code),function(X){
@@ -106,6 +111,7 @@ gcode <- function(data_list,
         data_list,
         main.code = main.code,
         main.parameters = main.parameters,
+        main.intercept = main.intercept,
         config = config,
         recover = recover,
         join = join,
@@ -176,6 +182,7 @@ gcode <- function(data_list,
 update_set <- function(x,
                        main.parameters,
                        main.code,
+                       main.intercept,
                        config,
                        fix){
 
@@ -188,10 +195,12 @@ update_set <- function(x,
   main.parameters$alpha_sample <- if(fix$alpha_sample){main.parameters$alpha_sample}else{t(t(main.parameters$alpha_signal)%*%t(main.code$code)%*%MASS::ginv(main.code$code%*%t(main.code$code)))}
   main.parameters$beta_sample <- if(fix$beta_sample){main.parameters$beta_sample}else{t(MASS::ginv(t(main.code$code)%*%main.code$code)%*%t(main.code$code)%*%t(main.parameters$beta_signal))}
 
-  main.parameters$intercept <- if(fix$intercept){main.parameters$intercept}else{colMeans(x - t(main.parameters$alpha_sample)%*%(main.code$code)%*%t(main.parameters$beta_sample))}
-  
+  main.intercept$cintercept <- if(fix$cintercept){main.intercept$cintercept}else{colMeans(x - t(main.parameters$alpha_sample)%*%(main.code$code)%*%t(main.parameters$beta_sample))}
+  main.intercept$rintercept <- if(fix$rintercept){main.intercept$rintercept}else{rowMeans(x - t(main.parameters$alpha_sample)%*%(main.code$code)%*%t(main.parameters$beta_sample))}
+    
   return(list(main.parameters = main.parameters,
-              main.code = main.code
+              main.code = main.code,
+              main.intercept = main.intercept
   ))
 
 }
