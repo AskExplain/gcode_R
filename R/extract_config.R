@@ -44,6 +44,7 @@ extract_config <- function(verbose=T){
 extract_transfer_framework <- function(verbose=T){
   transfer <- list(
     main.code = list(code = NULL, encode = NULL),
+    main.intercept = list(rintercept = NULL, cintercept = NULL),
     main.parameters = list(alpha_signal = NULL, beta_signal = NULL, alpha_sample = NULL, beta_sample = NULL, intercept = NULL),
     fix = list(code = F, encode = F, alpha_sample = F, beta_sample = F, alpha_signal = F, beta_signal = F, intercept = F)
     )
@@ -95,7 +96,7 @@ extract_recovery_framework <- function(verbose=T){
 #' @param code Joining the code parameters. A vector of integers, where identical integers indicate same the data axis to be joined.
 #' @export
 extract_join_framework <- function(verbose=T){
-  join <- list(complete=list(data_list=NULL,alpha_sample=NULL,beta_sample=NULL,code=NULL,alpha_signal=NULL,beta_signal=NULL),
+  join <- list(complete=list(data_list=NULL,alpha_sample=NULL,beta_sample=NULL,code=NULL,encode=NULL,alpha_signal=NULL,beta_signal=NULL,rintercept=NULL,cintercept=NULL),
                labels=list(alpha_sample=NULL,beta_sample=NULL)
   )
   
