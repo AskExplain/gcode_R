@@ -63,7 +63,7 @@ initialise.gcode <- function(data_list,
     }
 
     if (is.null(main.code$encode[[join$complete$code[i]]])){
-      if (!is.null(transfer$main.code$code[[join$complete$code[i]]])){
+      if (!is.null(transfer$main.code$encode[[join$complete$code[i]]])){
         main.code$encode[[join$complete$code[i]]] <- transfer$main.code$encode[[join$complete$code[i]]]
       } else {
         main.code$encode[[join$complete$code[i]]] <- main.parameters$alpha_sample[[join$complete$alpha_sample[i]]]%*%as.matrix(data_list[[join$complete$data_list[i]]])%*%main.parameters$beta_sample[[join$complete$beta_sample[i]]]
