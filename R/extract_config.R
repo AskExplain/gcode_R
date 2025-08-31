@@ -43,7 +43,7 @@ extract_config <- function(verbose=T){
 #' @export
 extract_transfer_framework <- function(verbose=T){
   transfer <- list(
-    main.code = NULL,
+    main.code = list(code = NULL, encode = NULL),
     main.parameters = list(alpha_signal = NULL, beta_signal = NULL, alpha_sample = NULL, beta_sample = NULL, intercept = NULL),
     fix = list(code = F, encode = F, alpha_sample = F, beta_sample = F, alpha_signal = F, beta_signal = F, intercept = F)
     )
